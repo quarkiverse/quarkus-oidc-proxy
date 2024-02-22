@@ -1,0 +1,71 @@
+= Quarkus - OIDC Proxy
+:extension-status: preview
+
+== Introduction
+
+This project extends Quarkus OIDC extension and adds OIDC authorization code flow support for Quarkus OIDC `service` applications by proxying OIDC authorization code flow requests and delegating them to the real OIDC provider which is configured for the current Quarkus OIDC `service` application.
+
+It allows an integration of Quarkus OIDC `service` applications without exposing internal OIDC configuration details with external Single-page applications (SPA) or Quarkus OIDC `web-app` applications which authenticate users with the OIDC authorization code.
+
+== Installation
+
+Add this Maven dependency:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkiverse.oidc-proxy</groupId>
+    <artifactId>quarkus-oidc-proxy</artifactId>
+</dependency>
+----
+
+== Getting Started
+
+Adding the OIDC proxy dependency enables the SPA to use the OIDC proxy endpoints to authenticate users with an authorization code flow and send the acquired access tokens to the Quarkus OIDC `service` application.
+
+For example, if the endpoint is listening at `http://localhost:8080`, then, after adding this dependency, the OIDC authorization endpoint is available at `http://localhost:8080/q/oidc/authorize` , the OIDC token endpoint is available at `http://localhost:8080/q/oidc/token`, the OIDC JWKS endpoint is available at `http://localhost:8080/q/oidc/jwks` and finally, the OIDC well known configuration endpoint which supports the discovery is available at `http://localhost:8080/q/oidc/.well-known/openid-configuration`.
+
+For example, the following configuration is enabling an OIDC proxy over a Quarkus OIDC Auth0 `service` application, without having to configure your Auth0 application to allow redirects to the SPA page:
+
+[source,properties]
+----
+quarkus.oidc.auth-server-url=https://${auth0-dev}.us.auth0.com <1>
+quarkus.oidc.client-id=${auth0-client-id}
+quarkus.oidc.credentials.secret=${auth0-client-secret}
+
+quarkus.oidc.authentication.redirect-path=/q/oidc/callback <2>
+quarkus.oidc-proxy.external-redirect-uri=${external-spa-redirect-url}
+----
+<1> OIDC `service` application which can only accept and verify the bearer access tokens.
+<2> Let OIDC proxy accept callbacks at the `/q/oidc/callback` path and redirect to the actual SPA redirect path. The Auth0 application will only need to allow a redirect to `http://localhost:8080/q/oidc/callback`.
+
+OIDC proxy root and individual endpoint paths can be customized.
+You can customize the `/q/oidc` OIDC proxy root path with a `quarkus.oidc-proxy.root-path` property. Each individual endpoint can also be customized.
+
+For example, if you set `quarkus.oidc-proxy.root-path` to `openid-connect` and `quarkus.oidc-proxy.authorization-path` to `/authorization`, then you will get the OIDC authorization endpoint available at `http://localhost:8080/openid-connect/authorization`, etc.
+
+OIDC proxy endpoints are public because they have to delegate to the real OIDC provider.
+
+If you use a wildcard authentication or role-based access control HTTP policy, make sure to permit access to the OIDC proxy endpoints, for example:
+
+[source,properties]
+----
+quarkus.http.auth.permission.service.paths=/* <1>
+quarkus.http.auth.permission.service.policy=authenticated
+
+quarkus.http.auth.permission.oidcproxy.paths=/q/oidc/* <2>
+quarkus.http.auth.permission.oidcproxy.policy=permit
+----
+<1> Requests to all service endpoints and resources must be authenticated
+<2> Permit access to the OIDC proxy endpoints only
+
+
+== Testing
+
+Please see the test in the `deployment` module.
+
+[[extension-configuration-reference]]
+== Extension Configuration Reference
+
+include::config.adoc[leveloffset=+1, opts=optional]
+
