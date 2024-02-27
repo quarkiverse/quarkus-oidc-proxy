@@ -1,1 +1,1 @@
-* xref:index.adoc[Quarkus - Kerberos]
+* xref:index.adoc[Quarkus - OIDC Proxy]
