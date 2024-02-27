@@ -1,5 +1,5 @@
-name: quarkus-kerberos
-title: Kerberos
+name: quarkus-oidc-proxy
+title: OIDC Proxy
 version: dev
 nav:
   - modules/ROOT/nav.adoc
