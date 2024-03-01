@@ -12,7 +12,13 @@ import io.smallrye.config.WithDefault;
 public interface OidcProxyConfig {
 
     /**
-     * OIDC proxy authorization endpoint path
+     * OIDC service tenant identifier which can be set to select an OIDC tenant configuration.
+     * The default OIDC tenant configuration is used when this property is not set.
+     */
+    Optional<String> tenantId();
+
+    /**
+     * OIDC proxy root path.
      */
     @WithDefault("/q/oidc")
     String rootPath();
@@ -43,42 +49,37 @@ public interface OidcProxyConfig {
     String userInfoPath();
 
     /**
-     * OIDC service tenant identifier
-     */
-    Optional<String> tenantId();
-
-    /**
-     * Absolute external redirect URI.
-     * <p/>
-     * If 'quarkus.oidc.authentication.redirect-path' is configured then configuring this proxy is required.
-     * In this case, the proxy will request a redirect to 'quarkus.oidc.authentication.redirect-path' and
-     * will redirect further to the external config path.
-     */
-    Optional<String> externalRedirectUri();
-
-    /**
-     * Allow to return a refresh token from the authorization code grant response
-     */
-    @WithDefault("true")
-    boolean allowRefreshToken();
-
-    /**
-     * Allow to return an ID token from the authorization code grant response
+     * Allow to return an ID token from the authorization code grant response.
      */
     @WithDefault("true")
     boolean allowIdToken();
 
     /**
-     * Require that if the OIDC `service` application configures the client id
-     * then the provided client id must match it
+     * Allow to return a refresh token from the authorization code grant response.
      */
     @WithDefault("true")
-    boolean clientIdMatchRequired();
+    boolean allowRefreshToken();
 
     /**
-     * Require that if the OIDC `service` application configures the client secret
-     * then the provided client secret must match it
+     * Absolute external redirect URI.
+     * <p/>
+     * If 'quarkus.oidc.authentication.redirect-path' is configured then configuring this property is required.
+     * In this case, the proxy will request a redirect to 'quarkus.oidc.authentication.redirect-path' and
+     * will redirect further to the external redirect URI.
      */
-    @WithDefault("true")
-    boolean clientSecretMatchRequired();
+    Optional<String> externalRedirectUri();
+
+    /**
+     * Client id that the external client must use. If this property is not set then the external client
+     * must provide a client_id which matches `quarkus.oidc.client-id`.
+     */
+    Optional<String> externalClientId();
+
+    /**
+     * Client secret that the external client must use. If this property is not set then the external client
+     * must provide a client_secret which matches the configured OIDC service client secret.
+     * External client may not provide the client_secret if it is not configured
+     * with either this property or the OIDC tenant configuration, in order to support public clients.
+     */
+    Optional<String> externalClientSecret();
 }

@@ -42,6 +42,7 @@ public class OidcProxy {
     final OidcTenantConfig oidcTenantConfig;
     final OidcProxyConfig oidcProxyConfig;
     final WebClient client;
+    final String configuredClientSecret;
 
     public OidcProxy(TenantConfigBean tenantConfig, OidcProxyConfig oidcProxyConfig) {
         TenantConfigContext tenantConfigContext = oidcProxyConfig.tenantId().isEmpty() ? tenantConfig.getDefaultTenant()
@@ -50,11 +51,20 @@ public class OidcProxy {
         this.oidcMetadata = tenantConfigContext.getOidcMetadata();
         this.client = tenantConfigContext.getOidcProviderClient().getWebClient();
         this.oidcProxyConfig = oidcProxyConfig;
+        this.configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials);
     }
 
     public void setup(Router router, String httpRootPath) {
         if (oidcTenantConfig.applicationType.orElse(ApplicationType.SERVICE) == ApplicationType.WEB_APP) {
             throw new ConfigurationException("OIDC Proxy can only be used with OIDC service applications");
+        }
+        if (oidcTenantConfig.clientId.isEmpty()) {
+            throw new ConfigurationException(
+                    "OIDC service client id must be configured to support OIDC proxy authorize and token endpoints");
+        }
+        if (oidcProxyConfig.externalClientSecret().isPresent() && configuredClientSecret.isEmpty()) {
+            throw new ConfigurationException(
+                    "OIDC service client secret must be configured to replace the external client secret during the token endpoint request");
         }
         if (oidcMetadata.getAuthorizationUri() == null || oidcMetadata.getTokenUri() == null) {
             throw new ConfigurationException(
@@ -63,7 +73,7 @@ public class OidcProxy {
         Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
         if (authMethod == Method.POST_JWT) {
             throw new ConfigurationException(
-                    "Unsupported cliemt authentication method");
+                    "Unsupported OIDC service client authentication method");
         }
         if (oidcTenantConfig.authentication.redirectPath.isPresent()) {
             if (!oidcProxyConfig.externalRedirectUri().isPresent()) {
@@ -103,7 +113,8 @@ public class OidcProxy {
         // client_id
         final String clientId = getClientId(queryParams.get(OidcConstants.CLIENT_ID));
         if (clientId == null) {
-            badClientRequest(context, "Client id", clientId);
+            LOG.error("Client id must be provided");
+            badClientRequest(context);
             return;
         }
         codeFlowParams.append("&").append(OidcConstants.CLIENT_ID).append("=")
@@ -117,7 +128,8 @@ public class OidcProxy {
         // state
         final String state = queryParams.get(OidcConstants.CODE_FLOW_STATE);
         if (state == null) {
-            badClientRequest(context, "State", state);
+            LOG.error("State must be provided");
+            badClientRequest(context);
             return;
         }
         codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_STATE).append("=")
@@ -126,7 +138,8 @@ public class OidcProxy {
         // redirect_uri
         final String redirectUri = getRedirectUri(context, queryParams.get(OidcConstants.CODE_FLOW_REDIRECT_URI));
         if (redirectUri == null) {
-            badClientRequest(context, "Redirect URI", redirectUri);
+            LOG.error("Redirect URI must be provided");
+            badClientRequest(context);
             return;
         }
         codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_REDIRECT_URI).append("=")
@@ -187,8 +200,8 @@ public class OidcProxy {
                         String grantType = requestParams.get(OidcConstants.GRANT_TYPE);
                         if (!OidcConstants.AUTHORIZATION_CODE.equals(grantType)
                                 && !OidcConstants.REFRESH_TOKEN_GRANT.equals(grantType)) {
-                            badClientRequest(context, "Grant type", grantType);
-                            return Uni.createFrom().voidItem();
+                            LOG.errorf("Unsupported grant: %s", grantType);
+                            return badClientRequest(context);
                         }
                         encodeForm(buffer, OidcConstants.GRANT_TYPE, grantType);
 
@@ -207,19 +220,23 @@ public class OidcProxy {
                             clientSecret = requestParams.get(OidcConstants.CLIENT_SECRET);
                         }
                         if (clientId == null) {
-                            badClientRequest(context, "Client id", clientId);
-                            return Uni.createFrom().voidItem();
+                            LOG.error("Client id must be provided");
+                            return badClientRequest(context);
                         }
-                        String configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials);
-                        if (oidcProxyConfig.clientSecretMatchRequired() &&
-                                (configuredClientSecret == null && clientSecret != null
-                                        || configuredClientSecret != null && !configuredClientSecret.equals(clientSecret))) {
-                            badClientRequest(context, "Client secret", clientSecret);
-                            return Uni.createFrom().voidItem();
+
+                        if (oidcProxyConfig.externalClientSecret().isPresent()) {
+                            if (oidcProxyConfig.externalClientSecret().get().equals(clientSecret)) {
+                                clientSecret = configuredClientSecret;
+                            } else {
+                                LOG.error("Provided client secret does not match the external client secret property");
+                                return badClientRequest(context);
+                            }
                         }
-                        if (configuredClientSecret != null) {
-                            clientSecret = configuredClientSecret;
+                        if (configuredClientSecret != null && !configuredClientSecret.equals(clientSecret)) {
+                            LOG.error("Provided client secret does not match the OIDC service client secret property");
+                            return badClientRequest(context);
                         }
+
                         Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
                         if (authMethod == Method.BASIC) {
                             String encodedClientIdAndSecret = new String(Base64.getEncoder().encode(
@@ -239,24 +256,24 @@ public class OidcProxy {
                             // code
                             final String code = requestParams.get(OidcConstants.CODE_FLOW_CODE);
                             if (code == null) {
-                                badClientRequest(context, "Authorization code", code);
-                                return Uni.createFrom().voidItem();
+                                LOG.error("Authorization code must be provided");
+                                return badClientRequest(context);
                             }
                             encodeForm(buffer, OidcConstants.CODE_FLOW_CODE, code);
                             // code
                             final String redirectUri = getRedirectUri(context,
                                     requestParams.get(OidcConstants.CODE_FLOW_REDIRECT_URI));
                             if (redirectUri == null) {
-                                badClientRequest(context, "Redirect URI", redirectUri);
-                                return Uni.createFrom().voidItem();
+                                LOG.error("Redirect URI must be provided");
+                                return badClientRequest(context);
                             }
                             encodeForm(buffer, OidcConstants.CODE_FLOW_REDIRECT_URI, redirectUri);
                         } else {
                             // refresh token
                             final String refreshToken = requestParams.get(OidcConstants.REFRESH_TOKEN_VALUE);
                             if (refreshToken == null) {
-                                badClientRequest(context, "Refresh token", refreshToken);
-                                return Uni.createFrom().voidItem();
+                                LOG.error("Refresh token must be provided");
+                                return badClientRequest(context);
                             }
                             encodeForm(buffer, OidcConstants.REFRESH_TOKEN_VALUE, refreshToken);
                         }
@@ -306,7 +323,14 @@ public class OidcProxy {
 
         String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
         if (authHeader == null) {
-            badClientRequest(context, "Authorization", null);
+            LOG.error("Authorization header must be provided");
+            badClientRequest(context);
+            return;
+        }
+
+        if (!authHeader.contains("Bearer")) {
+            LOG.error("Authorization Bearer scheme must be used");
+            badClientRequest(context);
             return;
         }
 
@@ -343,14 +367,10 @@ public class OidcProxy {
         endJsonResponse(context, json.toString());
     }
 
-    private void badClientRequest(RoutingContext context, String name, String value) {
-        if (value == null) {
-            LOG.errorf("%s parameter is null", name);
-        } else {
-            LOG.errorf("%s parameter is invalid: %s", name, value);
-        }
+    private Uni<Void> badClientRequest(RoutingContext context) {
         context.response().setStatusCode(400);
         context.response().end();
+        return Uni.createFrom().voidItem();
     }
 
     private static void endJsonResponse(RoutingContext context, String jsonResponse) {
@@ -369,15 +389,20 @@ public class OidcProxy {
     }
 
     private String getClientId(String providedClientId) {
-        // provided client id must be set
-        if (providedClientId == null) {
+        if (oidcProxyConfig.externalClientId().isPresent()) {
+            if (oidcProxyConfig.externalClientId().get().equals(providedClientId)) {
+                return oidcTenantConfig.clientId.get();
+            } else {
+                LOG.error("Provided client id does not match the external client id property");
+                return null;
+            }
+        }
+        if (oidcTenantConfig.clientId.get().equals(providedClientId)) {
+            return providedClientId;
+        } else {
+            LOG.error("Provided client id does not match the OIDC service client id property");
             return null;
         }
-        if (oidcTenantConfig.clientId.isPresent() &&
-                (!oidcProxyConfig.clientIdMatchRequired() || oidcTenantConfig.clientId.get().equals(providedClientId))) {
-            return oidcTenantConfig.clientId.get();
-        }
-        return providedClientId;
     }
 
     private String getRedirectUri(RoutingContext context, String redirectUri) {

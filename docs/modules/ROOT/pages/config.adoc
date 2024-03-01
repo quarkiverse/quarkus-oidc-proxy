@@ -102,22 +102,22 @@ Allow OIDC Proxy to return an ID token from its token endpoint
 |`true`
 
 
-a| [[quarkus-oidc-proxy_quarkus.oidc-proxy.client-id-match-required]]`link:#quarkus-oidc-proxy_quarkus.oidc-proxy.client-id-match-required[quarkus.oidc-proxy.client-id-match-required]`
+a| [[quarkus-oidc-proxy_quarkus.oidc-proxy.external-client-id]]`link:#quarkus-oidc-proxy_quarkus.oidc-proxy.external-client-id[quarkus.oidc-proxy.external-client-id]`
 
 [.description]
 --
-Require that if the proxied OIDC `service` has `quarkus.oidc.client-id` configured then the client id provided to authorization and token endpoints must match it.
-Disable this property if you do not want to register the real client id with the external SPA or other application which works with the OIDC proxy.  
+Client id that the external client must use. If this property is not set then the external client must provide a client_id which matches `quarkus.oidc.client-id`.
+Set this property if you do not want to register the real client id with the external SPA or other application which works with the OIDC proxy.  
 --|boolean
 |`true`
 
 
-a| [[quarkus-oidc-proxy_quarkus.oidc-proxy.client-secret-match-required]]`link:#quarkus-oidc-proxy_quarkus.oidc-proxy.client-secret-match-required[quarkus.oidc-proxy.client-secret-match-required]`
+a| [[quarkus-oidc-proxy_quarkus.oidc-proxy.external-client-secret]]`link:#quarkus-oidc-proxy_quarkus.oidc-proxy.external-client-secret[quarkus.oidc-proxy.external-client-secret]`
 
 [.description]
 --
-Require that if the proxied OIDC `service` has `quarkus.oidc.credentials.client-secret` configured then the client secret provided to the token endpoint must match it.
-Disable this property if you do not want to register the real client secret with the external SPA or other application which works with the OIDC proxy.
+Client secret that the external client must use. If this property is not set then the external client must provide a client_secret which matches the configured
+OIDC service client secret. Set this property if you do not want to register the real client secret with the external SPA or other application which works with the OIDC proxy. External client do not have to provide the client_secret if it is not configured with either this property or the OIDC tenant configuration, in order to support public clients. 
 --|boolean
 |`true`
 
