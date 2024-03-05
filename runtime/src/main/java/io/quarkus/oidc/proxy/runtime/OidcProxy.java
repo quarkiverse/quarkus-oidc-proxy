@@ -58,10 +58,6 @@ public class OidcProxy {
         if (oidcTenantConfig.applicationType.orElse(ApplicationType.SERVICE) == ApplicationType.WEB_APP) {
             throw new ConfigurationException("OIDC Proxy can only be used with OIDC service applications");
         }
-        if (oidcTenantConfig.clientId.isEmpty()) {
-            throw new ConfigurationException(
-                    "OIDC service client id must be configured to support OIDC proxy authorize and token endpoints");
-        }
         if (oidcProxyConfig.externalClientSecret().isPresent() && configuredClientSecret.isEmpty()) {
             throw new ConfigurationException(
                     "OIDC service client secret must be configured to replace the external client secret during the token endpoint request");
@@ -102,7 +98,7 @@ public class OidcProxy {
     }
 
     public void authorize(RoutingContext context) {
-        LOG.info("OidcProxy: authorize");
+        LOG.debug("OidcProxy: authorize");
         MultiMap queryParams = context.queryParams();
 
         StringBuilder codeFlowParams = new StringBuilder(168); // experimentally determined to be a good size for preventing resizing and not wasting space
@@ -154,7 +150,7 @@ public class OidcProxy {
     }
 
     public void localRedirect(RoutingContext context) {
-        LOG.info("OidcProxy: local redirect");
+        LOG.debug("OidcProxy: local redirect");
         MultiMap queryParams = context.queryParams();
 
         StringBuilder codeFlowParams = new StringBuilder(168); // experimentally determined to be a good size for preventing resizing and not wasting space
@@ -188,7 +184,7 @@ public class OidcProxy {
                 .onItem().transformToUni(new Function<MultiMap, Uni<? extends Void>>() {
                     @Override
                     public Uni<Void> apply(MultiMap requestParams) {
-                        LOG.info("OidcProxy: Token exchange: start");
+                        LOG.debug("OidcProxy: Token exchange: start");
                         HttpRequest<Buffer> request = client.postAbs(oidcMetadata.getTokenUri());
                         request.putHeader(String.valueOf(HttpHeaders.CONTENT_TYPE), String
                                 .valueOf(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED));
@@ -212,10 +208,12 @@ public class OidcProxy {
                         // check Authorization header
                         String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
                         if (authHeader != null) {
+                            LOG.debug("OidcProxy: Authorization header");
                             String[] clientIdAndSecret = getClientIdAndSecretFromAuthorization(authHeader);
                             clientId = getClientId(clientIdAndSecret[0]);
                             clientSecret = clientIdAndSecret[1];
                         } else {
+                            LOG.debug("OidcProxy: POST authentication");
                             clientId = getClientId(requestParams.get(OidcConstants.CLIENT_ID));
                             clientSecret = requestParams.get(OidcConstants.CLIENT_SECRET);
                         }
@@ -283,7 +281,7 @@ public class OidcProxy {
                                 .transformToUni(new BiFunction<HttpResponse<Buffer>, Throwable, Uni<? extends Void>>() {
                                     @Override
                                     public Uni<Void> apply(HttpResponse<Buffer> t, Throwable u) {
-                                        LOG.info("OidcProxy: Token exchange: end");
+                                        LOG.debug("OidcProxy: Token exchange: end");
 
                                         JsonObject body = t.bodyAsJsonObject();
                                         if (!oidcProxyConfig.allowIdToken()) {
@@ -306,7 +304,7 @@ public class OidcProxy {
     }
 
     public void jwks(RoutingContext context) {
-        LOG.info("OidcProxy: Get JWK");
+        LOG.debug("OidcProxy: Get JWK");
         HttpRequest<Buffer> request = client.getAbs(oidcMetadata.getJsonWebKeySetUri());
         request.putHeader(String.valueOf(HttpHeaders.ACCEPT), "application/json");
         request.send()
@@ -319,7 +317,7 @@ public class OidcProxy {
     }
 
     public void userinfo(RoutingContext context) {
-        LOG.info("OidcProxy: Get UserInfo");
+        LOG.debug("OidcProxy: Get UserInfo");
 
         String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
         if (authHeader == null) {
@@ -347,7 +345,7 @@ public class OidcProxy {
     }
 
     public void wellKnownConfig(RoutingContext context) {
-        LOG.info("OidcProxy: Well Known Configuration");
+        LOG.debug("OidcProxy: Well Known Configuration");
         JsonObject json = new JsonObject();
         json.put(OidcConfigurationMetadata.AUTHORIZATION_ENDPOINT,
                 buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.authorizationPath()));
@@ -393,16 +391,16 @@ public class OidcProxy {
             if (oidcProxyConfig.externalClientId().get().equals(providedClientId)) {
                 return oidcTenantConfig.clientId.get();
             } else {
-                LOG.error("Provided client id does not match the external client id property");
+                LOG.errorf("Provided client id '%s' does not match the external client id '%s' property", providedClientId,
+                        oidcProxyConfig.externalClientId().get());
                 return null;
             }
         }
-        if (oidcTenantConfig.clientId.get().equals(providedClientId)) {
-            return providedClientId;
-        } else {
+        if (oidcTenantConfig.clientId.isPresent() && !oidcTenantConfig.clientId.get().equals(providedClientId)) {
             LOG.error("Provided client id does not match the OIDC service client id property");
             return null;
         }
+        return providedClientId;
     }
 
     private String getRedirectUri(RoutingContext context, String redirectUri) {
