@@ -251,5 +251,5 @@ Next, once the integration test passes with these `application.properties`, you 
 [[extension-configuration-reference]]
 == Extension Configuration Reference
 
-include::config.adoc[leveloffset=+1, opts=optional]
+include::includes/quarkus-oidc-proxy.adoc[leveloffset=+1, opts=optional]
 

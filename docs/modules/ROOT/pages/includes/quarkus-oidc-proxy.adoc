@@ -1,0 +1,218 @@
+
+:summaryTableId: quarkus-oidc-proxy
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[[quarkus-oidc-proxy_configuration]]link:#quarkus-oidc-proxy_configuration[Configuration property]
+
+h|Type
+h|Default
+
+a|icon:lock[title=Fixed at build time] [[quarkus-oidc-proxy_quarkus-oidc-proxy-enabled]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-enabled[quarkus.oidc-proxy.enabled]`
+
+
+[.description]
+--
+If the OIDC Proxy extension is enabled.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--|boolean 
+|`true`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-tenant-id]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-tenant-id[quarkus.oidc-proxy.tenant-id]`
+
+
+[.description]
+--
+OIDC service tenant identifier which can be set to select an OIDC tenant configuration. The default OIDC tenant configuration is used when this property is not set.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_TENANT_ID+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_TENANT_ID+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-root-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-root-path[quarkus.oidc-proxy.root-path]`
+
+
+[.description]
+--
+OIDC proxy root path.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_ROOT_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_ROOT_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/q/oidc`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-authorization-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-authorization-path[quarkus.oidc-proxy.authorization-path]`
+
+
+[.description]
+--
+OIDC proxy authorization endpoint path relative to the `root-path()`.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_AUTHORIZATION_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_AUTHORIZATION_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/authorize`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-token-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-token-path[quarkus.oidc-proxy.token-path]`
+
+
+[.description]
+--
+OIDC proxy token endpoint path relative to the `root-path()`
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_TOKEN_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_TOKEN_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/token`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-jwks-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-jwks-path[quarkus.oidc-proxy.jwks-path]`
+
+
+[.description]
+--
+OIDC proxy JSON Web Key Set endpoint path relative to the `root-path()`
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_JWKS_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_JWKS_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/jwks`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-user-info-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-user-info-path[quarkus.oidc-proxy.user-info-path]`
+
+
+[.description]
+--
+OIDC proxy UserInfo endpoint path relative to the `root-path()`. This path will not be supported if `allow-id-token()` is set to `false`.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_USER_INFO_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_USER_INFO_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/userinfo`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-allow-id-token]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-allow-id-token[quarkus.oidc-proxy.allow-id-token]`
+
+
+[.description]
+--
+Allow to return an ID token from the authorization code grant response.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_ALLOW_ID_TOKEN+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_ALLOW_ID_TOKEN+++`
+endif::add-copy-button-to-env-var[]
+--|boolean 
+|`true`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-allow-refresh-token]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-allow-refresh-token[quarkus.oidc-proxy.allow-refresh-token]`
+
+
+[.description]
+--
+Allow to return a refresh token from the authorization code grant response.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_ALLOW_REFRESH_TOKEN+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_ALLOW_REFRESH_TOKEN+++`
+endif::add-copy-button-to-env-var[]
+--|boolean 
+|`true`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-external-redirect-uri]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-external-redirect-uri[quarkus.oidc-proxy.external-redirect-uri]`
+
+
+[.description]
+--
+Absolute external redirect URI.
+
+If 'quarkus.oidc.authentication.redirect-path' is configured then configuring this property is required. In this case, the proxy will request a redirect to 'quarkus.oidc.authentication.redirect-path' and will redirect further to the external redirect URI.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_EXTERNAL_REDIRECT_URI+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_EXTERNAL_REDIRECT_URI+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-external-client-id]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-external-client-id[quarkus.oidc-proxy.external-client-id]`
+
+
+[.description]
+--
+Client id that the external client must use. If this property is not set then the external client must provide a client_id which matches `quarkus.oidc.client-id`.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_EXTERNAL_CLIENT_ID+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_EXTERNAL_CLIENT_ID+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-external-client-secret]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-external-client-secret[quarkus.oidc-proxy.external-client-secret]`
+
+
+[.description]
+--
+Client secret that the external client must use. If this property is not set then the external client must provide a client_secret which matches the configured OIDC service client secret. External client may not provide the client_secret if it is not configured with either this property or the OIDC tenant configuration, in order to support public clients.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_EXTERNAL_CLIENT_SECRET+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_EXTERNAL_CLIENT_SECRET+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+|===

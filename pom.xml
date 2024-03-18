@@ -10,10 +10,11 @@
   <artifactId>quarkus-oidc-proxy-parent</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>Quarkus - OIDC Proxy - Parent</name>
+  <name>Quarkus - OpenID Connect Proxy - Parent</name>
   <modules>
     <module>deployment</module>
     <module>runtime</module>
+    <module>docs</module>
   </modules>
   <scm>
     <connection>scm:git:git@github.com:quarkiverse/quarkus-oidc-proxy.git</connection>
