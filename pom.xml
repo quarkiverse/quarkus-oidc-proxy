@@ -14,6 +14,7 @@
   <modules>
     <module>deployment</module>
     <module>runtime</module>
+    <module>integration-tests</module>
   </modules>
   <scm>
     <connection>scm:git:git@github.com:quarkiverse/quarkus-oidc-proxy.git</connection>
@@ -43,16 +44,6 @@
         <groupId>net.sourceforge.htmlunit</groupId>
         <artifactId>htmlunit</artifactId>
         <version>${htmlunit.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpmime</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
     </dependencies>
   </dependencyManagement>

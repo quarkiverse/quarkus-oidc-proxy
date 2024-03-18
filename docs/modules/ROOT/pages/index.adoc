@@ -19,6 +19,7 @@ Add this Maven dependency:
 </dependency>
 ----
 
+[[getting-started]]
 == Getting Started
 
 Adding the OIDC proxy dependency enables the SPA to use the OIDC proxy endpoints to authenticate users with an authorization code flow and send the acquired access tokens to the Quarkus OIDC `service` application.
@@ -59,10 +60,193 @@ quarkus.http.auth.permission.oidcproxy.policy=permit
 <1> Requests to all service endpoints and resources must be authenticated
 <2> Permit access to the OIDC proxy endpoints only
 
-
 == Testing
 
-Please see the test in the `deployment` module.
+One relatively simple way to test OIDC Proxy is to use `HtmlUnit` to test a Quarkus OIDC `web-app` endpoint which is configured to use OIDC provider whose endpoints point to the OIDC Proxy.
+OIDC Proxy will delegate to `Keycloak` to manage an authorization code flow for this Quarkus OIDC `web-app` endpoint. Keycloak is launched by https://quarkus.io/guides/security-openid-connect-dev-services#dev-services-for-keycloak[DevServices for Keycloak] which support both dev and integration test modes.
+
+The Quarkus OIDC `web-app` endpoint will use an access token provided by the OIDC Proxy to call the OIDC `service` endpoint.
+
+Here is you can create such a test.
+
+Start by adding the following dependencies to your test project:
+
+[source.xml]
+----
+<dependency>
+    <groupId>net.sourceforge.htmlunit</groupId>
+    <artifactId>htmlunit</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-junit5</artifactId>
+    <scope>test</scope>
+</dependency>
+----
+
+Write this test code:
+[source,java]
+----
+package io.quarkus.oidc.proxy;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
+
+import com.gargoylesoftware.htmlunit.SilentCssErrorHandler;
+import com.gargoylesoftware.htmlunit.TextPage;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+import io.quarkus.test.junit.QuarkusTest;
+
+@QuarkusTest
+public class OidcProxyTestCase {
+
+    @Test
+    public void testOidcProxy() throws Exception {
+
+        try (final WebClient webClient = createWebClient()) {
+            HtmlPage page = webClient.getPage("http://localhost:8081/web-app");
+
+            assertEquals("Sign in to quarkus", page.getTitleText());
+
+            HtmlForm loginForm = page.getForms().get(0);
+
+            loginForm.getInputByName("username").setValueAttribute("alice");
+            loginForm.getInputByName("password").setValueAttribute("alice");
+
+            TextPage textPage = loginForm.getInputByName("login").click();
+
+            assertEquals("web-app: ID alice, service: Bearer alice", textPage.getContent());
+
+            webClient.getCookieManager().clearCookies();
+        }
+
+    }
+
+    private WebClient createWebClient() {
+        WebClient webClient = new WebClient();
+        webClient.setCssErrorHandler(new SilentCssErrorHandler());
+        return webClient;
+    }
+
+}
+----
+
+Add an OIDC `web-app` endpoint which will require an authorization code flow to support HtmlUnit calls and propagate the access token to the service endpoint:
+
+[source,java]
+----
+package io.quarkus.oidc.proxy;
+
+import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+
+import io.quarkus.oidc.IdToken;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
+
+@Path("/web-app")
+@Authenticated
+public class OidcWebAppResource {
+
+    @Inject
+    @IdToken
+    JsonWebToken idToken;
+
+    @Inject
+    @RestClient
+    ServiceApiClient serviceApiClient;
+
+    @GET
+    @Produces("text/plain")
+    public Uni<String> getName() {
+        return serviceApiClient.getName().onItem()
+                .transform(c -> ("web-app: " + idToken.getClaim("typ") + " " + idToken.getName() + ", service: " + c));
+    }
+}
+----
+
+Add `ServiceApiClient` which `OidcWebAppResource` will call:
+
+[source:java]
+----
+package io.quarkus.oidc.proxy;
+
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.core.MediaType;
+
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+
+import io.quarkus.oidc.token.propagation.AccessToken;
+import io.smallrye.mutiny.Uni;
+
+@RegisterRestClient(configKey = "service-api-client")
+@AccessToken
+public interface ServiceApiClient {
+
+    @GET
+    @Consumes(MediaType.TEXT_PLAIN)
+    Uni<String> getName();
+}
+----
+
+An OIDC `service` endpoint may look like this:
+[source,java]
+----
+package io.quarkus.oidc.proxy;
+
+import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+
+import org.eclipse.microprofile.jwt.JsonWebToken;
+
+import io.quarkus.security.Authenticated;
+
+@Path("/service")
+@Authenticated
+public class OidcServiceResource {
+
+    @Inject
+    JsonWebToken accessToken;
+
+    @GET
+    @Produces("text/plain")
+    public String getName() {
+        return accessToken.getClaim("typ") + " " + accessToken.getName();
+    }
+}
+----
+
+Finally, configure `application.properties`, note that `DevServices for Keycloak` will configure the OIDC `service` endpoint by setting its `quarkus.oidc.auth-server-url`, `quarkus.oidc.client-id` and `quarkus.oidc.credentials.secret` properties.
+
+[source.configuration]
+----
+# Default OIDC tenant which supports the OIDC `service` endpoint is setup by DevServices for Keycloak
+
+# The OIDC `web-app` tenant supports the OIDC `weba-app` endpoint
+quarkus.oidc.web-app.auth-server-url=http://localhost:8081/q/oidc <1>
+quarkus.oidc.web-app.client-id=${quarkus.oidc.client-id}
+quarkus.oidc.web-app.credentials.secret=secret
+quarkus.oidc.web-app.application-type=web-app
+quarkus.oidc.web-app.authentication.cookie-path=/web-app <2>
+quarkus.rest-client.service-api-client.url=http://localhost:8081/service
+----
+<1> OIDC Proxy sets all the required routes using the `/q/oidc` root path, as explained in the <<getting-started>> section. All the individial endpoint addresses are auto-discovered but you can also configur them individually.
+<2> OIDC session cookie path is limited to the OIDC `web-app` endpoint path only to avoid it being recognized during the OIDC `web-app` endpoint propagating the access tokens to the `service` endpoint. It is only done to support this test setup but is not necessary if the `service` endpoint is not collocated with the `web-app` endpoint.
+
+Next, once the integration test passes with these `application.properties`, you can add more tests verifying other OIDC Proxy properties.
 
 [[extension-configuration-reference]]
 == Extension Configuration Reference
