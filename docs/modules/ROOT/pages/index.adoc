@@ -3,9 +3,10 @@
 
 == Introduction
 
-This project extends Quarkus OIDC extension and adds OIDC authorization code flow support for Quarkus OIDC `service` applications by proxying OIDC authorization code flow requests and delegating them to the real OIDC provider which is configured for the current Quarkus OIDC `service` application.
+OIDC Proxy extends Quarkus OIDC extension and adds OIDC authorization code flow support for Quarkus OIDC `service` applications by proxying OIDC authorization code flow requests and delegating them to the real OIDC provider which is configured for the current Quarkus OIDC `service` application.
 
-It allows an integration of Quarkus OIDC `service` applications without exposing internal OIDC configuration details with external Single-page applications (SPA) or Quarkus OIDC `web-app` applications which authenticate users with the OIDC authorization code.
+It allows an integration of Quarkus OIDC `service` applications with the external Single-page applications (SPA) or Quarkus OIDC `web-app` applications which authenticate users with the OIDC authorization code without exposing internal OIDC configuration details.
+OIDC Proxy can also help when external SPAs can not implement an authorization code flow with some OIDC and OAuth2 providers but which are supported at the Quarkus OIDC level.
 
 == Installation
 
@@ -67,7 +68,7 @@ OIDC Proxy will delegate to `Keycloak` to manage an authorization code flow for 
 
 The Quarkus OIDC `web-app` endpoint will use an access token provided by the OIDC Proxy to call the OIDC `service` endpoint.
 
-Here is you can create such a test.
+Here is how you can create such a test.
 
 Start by adding the following dependencies to your test project:
 
@@ -235,7 +236,7 @@ Finally, configure `application.properties`, note that `DevServices for Keycloak
 ----
 # Default OIDC tenant which supports the OIDC `service` endpoint is setup by DevServices for Keycloak
 
-# The OIDC `web-app` tenant supports the OIDC `weba-app` endpoint
+# The OIDC `web-app` tenant supports the OIDC `web-app` endpoint
 quarkus.oidc.web-app.auth-server-url=http://localhost:8081/q/oidc <1>
 quarkus.oidc.web-app.client-id=${quarkus.oidc.client-id}
 quarkus.oidc.web-app.credentials.secret=secret
@@ -243,7 +244,7 @@ quarkus.oidc.web-app.application-type=web-app
 quarkus.oidc.web-app.authentication.cookie-path=/web-app <2>
 quarkus.rest-client.service-api-client.url=http://localhost:8081/service
 ----
-<1> OIDC Proxy sets all the required routes using the `/q/oidc` root path, as explained in the <<getting-started>> section. All the individial endpoint addresses are auto-discovered but you can also configur them individually.
+<1> OIDC Proxy sets all the required routes using the `/q/oidc` root path, as explained in the <<getting-started>> section. All the individial endpoint addresses are auto-discovered but you can also configure them individually.
 <2> OIDC session cookie path is limited to the OIDC `web-app` endpoint path only to avoid it being recognized during the OIDC `web-app` endpoint propagating the access tokens to the `service` endpoint. It is only done to support this test setup but is not necessary if the `service` endpoint is not collocated with the `web-app` endpoint.
 
 Next, once the integration test passes with these `application.properties`, you can add more tests verifying other OIDC Proxy properties.

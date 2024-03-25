@@ -204,7 +204,7 @@ a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-external-client-secret]]`link:#quarku
 
 [.description]
 --
-Client secret that the external client must use. If this property is not set then the external client must provide a client_secret which matches the configured OIDC service client secret. External client may not provide the client_secret if it is not configured with either this property or the OIDC tenant configuration, in order to support public clients.
+Client secret that the external client must use. If this property is not set then the external client must provide a client secret which matches the configured OIDC service client secret. External clients do not have to provide the client secret if it is not configured with either this property or the OIDC tenant configuration, in order to support public clients.
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_EXTERNAL_CLIENT_SECRET+++[]
