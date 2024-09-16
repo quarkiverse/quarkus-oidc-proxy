@@ -35,7 +35,7 @@ public class OidcProxyBuildStep {
         OidcProxyBuildTimeConfig config;
 
         public boolean getAsBoolean() {
-            return config.enabled;
+            return config.enabled();
         }
     }
 }
