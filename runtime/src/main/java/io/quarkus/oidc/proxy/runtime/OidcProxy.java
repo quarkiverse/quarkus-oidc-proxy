@@ -18,7 +18,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.quarkus.oidc.OidcConfigurationMetadata;
 import io.quarkus.oidc.OidcTenantConfig;
 import io.quarkus.oidc.OidcTenantConfig.ApplicationType;
-import io.quarkus.oidc.common.runtime.OidcCommonConfig.Credentials.Secret.Method;
+import io.quarkus.oidc.common.runtime.OidcClientCommonConfig.Credentials.Secret.Method;
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
 import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.oidc.runtime.OidcUtils;
