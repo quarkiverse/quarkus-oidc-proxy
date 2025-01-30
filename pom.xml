@@ -22,7 +22,7 @@
     <tag>HEAD</tag>
   </scm>
   <properties>
-    <quarkus.version>3.18.0</quarkus.version>
+    <quarkus.version>3.18.1</quarkus.version>
     <htmlunit.version>2.70.0</htmlunit.version>
   </properties>
   <dependencyManagement>
