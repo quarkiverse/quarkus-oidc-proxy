@@ -121,6 +121,7 @@ public class OidcProxy {
             codeFlowParams.append("&").append(OidcConstants.TOKEN_SCOPE).append("=")
                     .append(encodedScope);
         }
+
         // state
         final String state = queryParams.get(OidcConstants.CODE_FLOW_STATE);
         if (state == null) {
@@ -130,6 +131,20 @@ public class OidcProxy {
         }
         codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_STATE).append("=")
                 .append(state);
+
+        // nonce
+        final String nonce = queryParams.get(OidcConstants.NONCE);
+        if (nonce != null) {
+            codeFlowParams.append("&").append(OidcConstants.NONCE).append("=")
+                    .append(nonce);
+        }
+
+        // prompt
+        final String prompt = queryParams.get("prompt");
+        if (prompt != null) {
+            codeFlowParams.append("&").append("prompt").append("=")
+                    .append(prompt);
+        }
 
         // redirect_uri
         final String redirectUri = getRedirectUri(context, queryParams.get(OidcConstants.CODE_FLOW_REDIRECT_URI));
