@@ -1,12 +1,15 @@
 package io.quarkus.oidc.proxy;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.htmlunit.SilentCssErrorHandler;
 import org.htmlunit.TextPage;
 import org.htmlunit.WebClient;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlPage;
+import org.htmlunit.util.Cookie;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -31,6 +34,13 @@ public class OidcProxyTestCase {
 
             assertEquals("web-app: ID alice, service: Bearer alice", textPage.getContent());
 
+            assertNotNull(getSessionCookie(webClient));
+
+            textPage = webClient.getPage("http://localhost:8081/web-app/logout");
+            assertEquals("You have been logged out", textPage.getContent());
+
+            assertNull(getSessionCookie(webClient));
+
             webClient.getCookieManager().clearCookies();
         }
 
@@ -42,4 +52,7 @@ public class OidcProxyTestCase {
         return webClient;
     }
 
+    private Cookie getSessionCookie(WebClient webClient) {
+        return webClient.getCookieManager().getCookie("q_session_web-app");
+    }
 }

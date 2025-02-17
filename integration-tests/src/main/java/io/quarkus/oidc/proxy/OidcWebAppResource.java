@@ -13,7 +13,6 @@ import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
 
 @Path("/web-app")
-@Authenticated
 public class OidcWebAppResource {
 
     @Inject
@@ -26,8 +25,16 @@ public class OidcWebAppResource {
 
     @GET
     @Produces("text/plain")
+    @Authenticated
     public Uni<String> getName() {
         return serviceApiClient.getName().onItem()
                 .transform(c -> ("web-app: " + idToken.getClaim("typ") + " " + idToken.getName() + ", service: " + c));
+    }
+
+    @GET
+    @Produces("text/plain")
+    @Path("/post-logout")
+    public String postLogout() {
+        return "You have been logged out";
     }
 }
