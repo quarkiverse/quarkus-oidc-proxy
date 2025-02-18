@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches:
-      - "main"
+      - "3.15"
     paths-ignore:
       - '.gitignore'
       - 'CODEOWNERS'
