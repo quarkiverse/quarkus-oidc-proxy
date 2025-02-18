@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -71,13 +72,6 @@ public class OidcProxy {
             throw new ConfigurationException(
                     "Unsupported OIDC service client authentication method");
         }
-        if (oidcTenantConfig.authentication.redirectPath.isPresent()) {
-            if (!oidcProxyConfig.externalRedirectUri().isPresent()) {
-                throw new ConfigurationException("oidc-proxy.external-redirect-uri property must be configured because"
-                        + "the local quarkus.oidc.authentication.redirect-path is configured");
-            }
-            router.get(httpRootPath + oidcTenantConfig.authentication.redirectPath.get()).handler(this::localRedirect);
-        }
         router.get(httpRootPath + oidcProxyConfig.rootPath() + OidcConstants.WELL_KNOWN_CONFIGURATION)
                 .handler(this::wellKnownConfig);
         if (oidcMetadata.getJsonWebKeySetUri() != null) {
@@ -93,7 +87,18 @@ public class OidcProxy {
                 throw new ConfigurationException("oidc-proxy.external-redirect-uri property must be configured because"
                         + "the local quarkus.oidc.authentication.redirect-path is configured");
             }
-            router.get(oidcTenantConfig.authentication.redirectPath.get()).handler(this::localRedirect);
+            router.get(oidcTenantConfig.authentication.redirectPath.get()).handler(this::localAuthorizationCodeFlowRedirect);
+        }
+
+        if (oidcMetadata.getEndSessionUri() != null) {
+            router.get(httpRootPath + oidcProxyConfig.rootPath() + oidcProxyConfig.endSessionPath()).handler(this::endSession);
+            if (oidcTenantConfig.logout().postLogoutPath().isPresent()) {
+                if (!oidcProxyConfig.externalPostLogoutUri().isPresent()) {
+                    throw new ConfigurationException("oidc-proxy.external-post-logout-uri property must be configured because"
+                            + "the local quarkus.oidc.logout.post-logout-path is configured");
+                }
+                router.get(oidcTenantConfig.logout().postLogoutPath().get()).handler(this::localPostLogoutRedirect);
+            }
         }
     }
 
@@ -164,8 +169,45 @@ public class OidcProxy {
         context.response().end();
     }
 
-    public void localRedirect(RoutingContext context) {
-        LOG.debug("OidcProxy: local redirect");
+    public void endSession(RoutingContext context) {
+        LOG.debug("OidcProxy: end session");
+        MultiMap queryParams = context.queryParams();
+
+        StringBuilder endSessionParams = new StringBuilder(168); // experimentally determined to be a good size for preventing resizing and not wasting space
+
+        // ID token hint
+        final String idTokenHint = queryParams.get(OidcConstants.LOGOUT_ID_TOKEN_HINT);
+        if (idTokenHint != null) {
+            endSessionParams.append(OidcConstants.LOGOUT_ID_TOKEN_HINT).append("=").append(idTokenHint);
+        }
+
+        // redirect_uri
+        final String postLogoutUri = getPostLogoutUri(context, queryParams.get(oidcTenantConfig.logout().postLogoutUriParam()));
+        if (postLogoutUri != null) {
+            if (!endSessionParams.isEmpty()) {
+                endSessionParams.append("&");
+            }
+            endSessionParams.append(oidcTenantConfig.logout().postLogoutUriParam()).append("=").append(postLogoutUri);
+        }
+
+        if (!oidcTenantConfig.logout().extraParams().isEmpty()) {
+            for (Map.Entry<String, String> entry : oidcTenantConfig.logout().extraParams().entrySet()) {
+                if (!endSessionParams.isEmpty()) {
+                    endSessionParams.append("&");
+                }
+                endSessionParams.append(entry.getKey()).append("=").append(OidcCommonUtils.urlEncode(entry.getValue()));
+            }
+        }
+
+        String endSessionURL = oidcMetadata.getEndSessionUri() + "?" + endSessionParams.toString();
+
+        context.response().setStatusCode(HttpResponseStatus.FOUND.code());
+        context.response().putHeader(HttpHeaders.LOCATION, endSessionURL);
+        context.response().end();
+    }
+
+    public void localAuthorizationCodeFlowRedirect(RoutingContext context) {
+        LOG.debug("OidcProxy: local authorization code flow redirect");
         MultiMap queryParams = context.queryParams();
 
         StringBuilder codeFlowParams = new StringBuilder(168); // experimentally determined to be a good size for preventing resizing and not wasting space
@@ -191,6 +233,14 @@ public class OidcProxy {
 
         context.response().setStatusCode(HttpResponseStatus.FOUND.code());
         context.response().putHeader(HttpHeaders.LOCATION, redirectURL);
+        context.response().end();
+    }
+
+    public void localPostLogoutRedirect(RoutingContext context) {
+        LOG.debug("OidcProxy: local post logout redirect");
+
+        context.response().setStatusCode(HttpResponseStatus.FOUND.code());
+        context.response().putHeader(HttpHeaders.LOCATION, oidcProxyConfig.externalPostLogoutUri().get());
         context.response().end();
     }
 
@@ -370,6 +420,10 @@ public class OidcProxy {
             json.put(OidcConfigurationMetadata.JWKS_ENDPOINT,
                     buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.jwksPath()));
         }
+        if (oidcMetadata.getEndSessionUri() != null) {
+            json.put(OidcConfigurationMetadata.END_SESSION_ENDPOINT,
+                    buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.endSessionPath()));
+        }
         if (oidcMetadata.getUserInfoUri() != null && oidcProxyConfig.allowIdToken()) {
             json.put(OidcConfigurationMetadata.USERINFO_ENDPOINT,
                     buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.userInfoPath()));
@@ -426,6 +480,14 @@ public class OidcProxy {
         }
     }
 
+    private String getPostLogoutUri(RoutingContext context, String postLogoutUri) {
+        if (oidcTenantConfig.logout().postLogoutPath().isPresent()) {
+            return OidcCommonUtils.urlEncode(buildUri(context, oidcTenantConfig.logout().postLogoutPath().get()));
+        } else {
+            return postLogoutUri;
+        }
+    }
+
     private String encodeScope(String providedScope) {
         final String scopeSeparator = oidcTenantConfig.authentication.scopeSeparator.orElse(OidcUtils.DEFAULT_SCOPE_SEPARATOR);
         Set<String> scopes = new HashSet<>(OidcUtils.getAllScopes(oidcTenantConfig));
@@ -460,4 +522,5 @@ public class OidcProxy {
         }
         return null;
     }
+
 }

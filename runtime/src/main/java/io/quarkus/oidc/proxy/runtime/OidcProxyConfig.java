@@ -49,6 +49,12 @@ public interface OidcProxyConfig {
     String userInfoPath();
 
     /**
+     * OIDC proxy end session path relative to the {@link #rootPath()}.
+     */
+    @WithDefault("/logout")
+    String endSessionPath();
+
+    /**
      * Allow to return an ID token from the authorization code grant response.
      */
     @WithDefault("true")
@@ -68,6 +74,15 @@ public interface OidcProxyConfig {
      * will redirect further to the external redirect URI.
      */
     Optional<String> externalRedirectUri();
+
+    /**
+     * Absolute external post logout URI.
+     * <p/>
+     * If 'quarkus.oidc.logout.post-logout-path' is configured then configuring this property is required.
+     * In this case, the proxy will request a post logout redirect to 'quarkus.oidc.logout.post-logout-path' and
+     * will redirect further to the external post logout URI.
+     */
+    Optional<String> externalPostLogoutUri();
 
     /**
      * Client id that the external client must use. If this property is not set then the external client

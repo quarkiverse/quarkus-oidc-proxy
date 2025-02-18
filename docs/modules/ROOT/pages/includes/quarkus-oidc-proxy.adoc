@@ -78,6 +78,23 @@ endif::add-copy-button-to-env-var[]
 |`/authorize`
 
 
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-end-session-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-end-session-path[quarkus.oidc-proxy.end-session-path]`
+
+
+[.description]
+--
+OIDC proxy end session endpoint path relative to the `root-path()`.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_END_SESSION_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_END_SESSION_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/logout`
+
+
 a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-token-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-token-path[quarkus.oidc-proxy.token-path]`
 
 
@@ -177,6 +194,25 @@ Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_EXTERNAL_RE
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_OIDC_PROXY_EXTERNAL_REDIRECT_URI+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-external-logout-uri]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-external-logout-uri[quarkus.oidc-proxy.external-logout-uri]`
+
+
+[.description]
+--
+Absolute external logout URI.
+
+If 'quarkus.oidc.logout.post-logout-path' is configured then configuring this property is required. In this case, the proxy will request a post logout redirect to 'quarkus.oidc.logout.post-logout-path' and will redirect further to the external post logout URI.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_EXTERNAL_LOGOUT_URI+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_EXTERNAL_LOGOUT_URI+++`
 endif::add-copy-button-to-env-var[]
 --|string 
 |
