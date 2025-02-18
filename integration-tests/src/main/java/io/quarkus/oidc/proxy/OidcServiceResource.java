@@ -8,17 +8,19 @@ import jakarta.ws.rs.Produces;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import io.quarkus.security.Authenticated;
+import io.quarkus.security.identity.SecurityIdentity;
 
 @Path("/service")
 @Authenticated
 public class OidcServiceResource {
 
     @Inject
-    JsonWebToken accessToken;
+    SecurityIdentity accessToken;
 
     @GET
     @Produces("text/plain")
     public String getName() {
-        return accessToken.getClaim("typ") + " " + accessToken.getName();
+        JsonWebToken jwt = (JsonWebToken) accessToken.getPrincipal();
+        return jwt.getClaim("typ") + " " + jwt.getName();
     }
 }
