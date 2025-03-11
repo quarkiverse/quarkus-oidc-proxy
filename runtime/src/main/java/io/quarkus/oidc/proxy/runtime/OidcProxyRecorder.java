@@ -15,10 +15,10 @@ public class OidcProxyRecorder {
         this.oidcProxyConfig = oidcProxyConfig;
     }
 
-    public void setupRoutes(BeanContainer beanContainer, RuntimeValue<Router> routerValue, String httpRootPath) {
+    public void setupRoutes(BeanContainer beanContainer, RuntimeValue<Router> routerValue) {
         TenantConfigBean oidcTenantBean = beanContainer.beanInstance(TenantConfigBean.class);
         OidcProxy proxy = new OidcProxy(oidcTenantBean, oidcProxyConfig.getValue());
         Router router = routerValue.getValue();
-        proxy.setup(router, httpRootPath);
+        proxy.setup(router);
     }
 }

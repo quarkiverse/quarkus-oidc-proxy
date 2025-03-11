@@ -54,7 +54,7 @@ public class OidcProxy {
         this.configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials);
     }
 
-    public void setup(Router router, String httpRootPath) {
+    public void setup(Router router) {
         if (oidcTenantConfig.applicationType.orElse(ApplicationType.SERVICE) == ApplicationType.WEB_APP) {
             throw new ConfigurationException("OIDC Proxy can only be used with OIDC service applications");
         }
@@ -76,18 +76,18 @@ public class OidcProxy {
                 throw new ConfigurationException("oidc-proxy.external-redirect-uri property must be configured because"
                         + "the local quarkus.oidc.authentication.redirect-path is configured");
             }
-            router.get(httpRootPath + oidcTenantConfig.authentication.redirectPath.get()).handler(this::localRedirect);
+            router.get(oidcTenantConfig.authentication.redirectPath.get()).handler(this::localRedirect);
         }
-        router.get(httpRootPath + oidcProxyConfig.rootPath() + OidcConstants.WELL_KNOWN_CONFIGURATION)
+        router.get(oidcProxyConfig.rootPath() + OidcConstants.WELL_KNOWN_CONFIGURATION)
                 .handler(this::wellKnownConfig);
         if (oidcMetadata.getJsonWebKeySetUri() != null) {
-            router.get(httpRootPath + oidcProxyConfig.rootPath() + oidcProxyConfig.jwksPath()).handler(this::jwks);
+            router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.jwksPath()).handler(this::jwks);
         }
         if (oidcMetadata.getUserInfoUri() != null && oidcProxyConfig.allowIdToken()) {
-            router.get(httpRootPath + oidcProxyConfig.rootPath() + oidcProxyConfig.userInfoPath()).handler(this::userinfo);
+            router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.userInfoPath()).handler(this::userinfo);
         }
-        router.get(httpRootPath + oidcProxyConfig.rootPath() + oidcProxyConfig.authorizationPath()).handler(this::authorize);
-        router.post(httpRootPath + oidcProxyConfig.rootPath() + oidcProxyConfig.tokenPath()).handler(this::token);
+        router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.authorizationPath()).handler(this::authorize);
+        router.post(oidcProxyConfig.rootPath() + oidcProxyConfig.tokenPath()).handler(this::token);
         if (oidcTenantConfig.authentication.redirectPath.isPresent()) {
             if (!oidcProxyConfig.externalRedirectUri().isPresent()) {
                 throw new ConfigurationException("oidc-proxy.external-redirect-uri property must be configured because"
