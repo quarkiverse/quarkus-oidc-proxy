@@ -43,8 +43,9 @@ public class OidcProxy {
     final OidcProxyConfig oidcProxyConfig;
     final WebClient client;
     final String configuredClientSecret;
+    final String httpRootPath;
 
-    public OidcProxy(TenantConfigBean tenantConfig, OidcProxyConfig oidcProxyConfig) {
+    public OidcProxy(TenantConfigBean tenantConfig, OidcProxyConfig oidcProxyConfig, String httpRootPath) {
         TenantConfigContext tenantConfigContext = oidcProxyConfig.tenantId().isEmpty() ? tenantConfig.getDefaultTenant()
                 : tenantConfig.getStaticTenantsConfig().get(oidcProxyConfig.tenantId().get());
         this.oidcTenantConfig = tenantConfigContext.getOidcTenantConfig();
@@ -52,6 +53,7 @@ public class OidcProxy {
         this.client = tenantConfigContext.getOidcProviderClient().getWebClient();
         this.oidcProxyConfig = oidcProxyConfig;
         this.configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials);
+        this.httpRootPath = httpRootPath;
     }
 
     public void setup(Router router) {
@@ -449,6 +451,7 @@ public class OidcProxy {
                 : context.request().scheme();
         return new StringBuilder(scheme).append("://")
                 .append(authority)
+                .append(httpRootPath)
                 .append(path)
                 .toString();
     }
