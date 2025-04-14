@@ -21,6 +21,9 @@ public class OidcWebAppResource {
     JsonWebToken idToken;
 
     @Inject
+    JsonWebToken codeFlowAccessToken;
+
+    @Inject
     @RestClient
     ServiceApiClient serviceApiClient;
 
@@ -28,6 +31,7 @@ public class OidcWebAppResource {
     @Produces("text/plain")
     public Uni<String> getName() {
         return serviceApiClient.getName().onItem()
-                .transform(c -> ("web-app: " + idToken.getClaim("typ") + " " + idToken.getName() + ", service: " + c));
+                .transform(c -> ("web-app: " + idToken.getClaim("typ") + " " + idToken.getName() + ", code flow token: "
+                        + codeFlowAccessToken.getClaim("typ") + ", service: " + c));
     }
 }
