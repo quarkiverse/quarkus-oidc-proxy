@@ -2,6 +2,7 @@ package io.quarkus.oidc.proxy.runtime;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
@@ -26,6 +27,8 @@ import io.quarkus.oidc.runtime.OidcUtils;
 import io.quarkus.oidc.runtime.TenantConfigBean;
 import io.quarkus.oidc.runtime.TenantConfigContext;
 import io.quarkus.runtime.configuration.ConfigurationException;
+import io.smallrye.jwt.algorithm.KeyEncryptionAlgorithm;
+import io.smallrye.jwt.util.KeyUtils;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
@@ -45,6 +48,7 @@ public class OidcProxy {
     final WebClient client;
     final String configuredClientSecret;
     final String httpRootPath;
+    private Key tokenEncryptionKey;
 
     public OidcProxy(TenantConfigBean tenantConfig, OidcProxyConfig oidcProxyConfig, String httpRootPath) {
         TenantConfigContext tenantConfigContext = oidcProxyConfig.tenantId().isEmpty() ? tenantConfig.getDefaultTenant()
@@ -64,6 +68,19 @@ public class OidcProxy {
         if (oidcProxyConfig.externalClientSecret().isPresent() && configuredClientSecret.isEmpty()) {
             throw new ConfigurationException(
                     "OIDC service client secret must be configured to replace the external client secret during the token endpoint request");
+        }
+        if (oidcProxyConfig.tokenEncryptionKeyLocation().isPresent()) {
+            try {
+                tokenEncryptionKey = KeyUtils.readEncryptionKey(oidcProxyConfig.tokenEncryptionKeyLocation().get(), null);
+            } catch (Throwable ex) {
+                throw new ConfigurationException(
+                        "Token encryption key can not be read from " + oidcProxyConfig.tokenEncryptionKeyLocation().get(), ex);
+            }
+        }
+        if (oidcTenantConfig.token().decryptAccessToken() && tokenEncryptionKey == null) {
+            throw new ConfigurationException(
+                    "Token encryption key must be available for the OIDC proxy to use it to encrypt tokens"
+                            + "because OIDC service expects encrypted access tokens.");
         }
         if (oidcMetadata.getAuthorizationUri() == null || oidcMetadata.getTokenUri() == null) {
             throw new ConfigurationException(
@@ -357,6 +374,17 @@ public class OidcProxy {
                                         if (!oidcProxyConfig.allowRefreshToken()) {
                                             body.remove(OidcConstants.REFRESH_TOKEN_VALUE);
                                         }
+                                        if (tokenEncryptionKey != null) {
+                                            String originalAccessToken = (String) body.remove(OidcConstants.ACCESS_TOKEN_VALUE);
+                                            try {
+                                                String encryptedAccessToken = OidcUtils.encryptString(originalAccessToken,
+                                                        tokenEncryptionKey, KeyEncryptionAlgorithm.RSA_OAEP);
+                                                body.put(OidcConstants.ACCESS_TOKEN_VALUE, encryptedAccessToken);
+                                            } catch (Throwable tex) {
+                                                LOG.error("Access token can not be decrypted");
+                                                return serverError(context);
+                                            }
+                                        }
                                         endJsonResponse(context, body.toString());
                                         return Uni.createFrom().voidItem();
                                     }
@@ -438,6 +466,12 @@ public class OidcProxy {
 
     private Uni<Void> badClientRequest(RoutingContext context) {
         context.response().setStatusCode(400);
+        context.response().end();
+        return Uni.createFrom().voidItem();
+    }
+
+    private Uni<Void> serverError(RoutingContext context) {
+        context.response().setStatusCode(500);
         context.response().end();
         return Uni.createFrom().voidItem();
     }
