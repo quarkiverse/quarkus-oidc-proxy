@@ -12,7 +12,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkus.test.QuarkusDevModeTest;
 
-public class OidcProxyHttpRootPathTestCase {
+public class OidcProxyAccessTokenEncryptedWithClientSecretTestCase {
 
     private static Class<?>[] testClasses = {
             OidcServiceResource.class,
@@ -24,13 +24,13 @@ public class OidcProxyHttpRootPathTestCase {
     static final QuarkusDevModeTest test = new QuarkusDevModeTest()
             .withApplicationRoot((jar) -> jar
                     .addClasses(testClasses)
-                    .addAsResource("application-http-root-path.properties", "application.properties"));
+                    .addAsResource("application-encrypted-token-with-client-secret.properties", "application.properties"));
 
     @Test
     public void testOidcProxy() throws Exception {
 
         try (final WebClient webClient = createWebClient()) {
-            HtmlPage page = webClient.getPage("http://localhost:8080/my-custom-root-path/web-app");
+            HtmlPage page = webClient.getPage("http://localhost:8080/web-app");
 
             assertEquals("Sign in to quarkus", page.getTitleText());
 

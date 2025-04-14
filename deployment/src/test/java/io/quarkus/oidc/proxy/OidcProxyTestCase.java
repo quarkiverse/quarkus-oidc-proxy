@@ -41,7 +41,7 @@ public class OidcProxyTestCase {
 
             TextPage textPage = loginForm.getButtonByName("login").click();
 
-            assertEquals("web-app: ID alice, service: Bearer alice", textPage.getContent());
+            assertEquals("web-app: ID alice, code flow token: Bearer, service: Bearer alice", textPage.getContent());
 
             webClient.getCookieManager().clearCookies();
         }
