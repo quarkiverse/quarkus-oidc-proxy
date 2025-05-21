@@ -67,6 +67,15 @@ public interface OidcProxyConfig {
     boolean allowRefreshToken();
 
     /**
+     * Location of the encryption key that must be used to encrypt access and refresh tokens, as well as authorization codes,
+     * before returning them to the external client.
+     *
+     * This property can be set when the `quarkus.oidc.token.decrypt-access-token` property is enabled.
+     * Configured client secret is used as a secret encryption key if this property is not set.
+     */
+    Optional<String> tokenEncryptionKeyLocation();
+
+    /**
      * Absolute external redirect URI.
      * <p/>
      * If 'quarkus.oidc.authentication.redirect-path' is configured then configuring this property is required.

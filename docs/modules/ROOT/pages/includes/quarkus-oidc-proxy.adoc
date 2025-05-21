@@ -251,4 +251,22 @@ endif::add-copy-button-to-env-var[]
 --|string 
 |
 
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-token-encryption-key-location]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-token-encryption-key-location[quarkus.oidc-proxy.token-encryption-key-location]`
+
+
+[.description]
+--
+Location of the encryption key that must be used to encrypt access and refresh tokens, as well as authorization codes, before returning them to the external client. This property is effective when the `quarkus.oidc.token.decrypt-access-token` property is enabled. Configured client secret is used as a secret encryption key if this property is not set.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_TOKEN_ENCRYPTION_KEY_LOCATION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_TOKEN_ENCRYPTION_KEY_LOCATION+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
 |===
