@@ -43,6 +43,7 @@ import io.vertx.mutiny.ext.web.client.WebClient;
 
 public class OidcProxy {
     private static final Logger LOG = Logger.getLogger(OidcProxy.class);
+    private static final String OIDC_PROXY_STATE_COOKIE = "q_proxy_auth";
     final OidcConfigurationMetadata oidcMetadata;
     final OidcTenantConfig oidcTenantConfig;
     final OidcProxyConfig oidcProxyConfig;
@@ -150,6 +151,11 @@ public class OidcProxy {
         codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_STATE).append("=")
                 .append(state);
 
+        if (localAuthorizationCodeFlowRedirect) {
+            OidcUtils.createCookie(context, oidcTenantConfig, OIDC_PROXY_STATE_COOKIE, state,
+                    oidcTenantConfig.authentication().stateCookieAge().getSeconds());
+        }
+
         // nonce
         final String nonce = queryParams.get(OidcConstants.NONCE);
         if (nonce != null) {
@@ -241,8 +247,29 @@ public class OidcProxy {
             // code
             codeFlowParams.append(OidcConstants.CODE_FLOW_CODE).append("=").append(code);
             // state
-            codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_STATE).append("=")
-                    .append(queryParams.get(OidcConstants.CODE_FLOW_STATE));
+            String state = queryParams.get(OidcConstants.CODE_FLOW_STATE);
+            if (state == null) {
+                LOG.error("State query parameter is missing");
+                context.response().setStatusCode(HttpResponseStatus.UNAUTHORIZED.code());
+                context.response().end();
+                return;
+            }
+            String oidcProxyState = OidcUtils.removeCookie(context, oidcTenantConfig, OIDC_PROXY_STATE_COOKIE);
+            if (oidcProxyState == null) {
+                LOG.error("Proxy state cookie is missing or could not be retrieved");
+                context.response().setStatusCode(HttpResponseStatus.UNAUTHORIZED.code());
+                context.response().end();
+                return;
+            }
+            if (!oidcProxyState.equals(state)) {
+                LOG.error("State query parameter is not equal to the proxy state");
+                context.response().setStatusCode(HttpResponseStatus.UNAUTHORIZED.code());
+                context.response().end();
+                return;
+            }
+
+            codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_STATE).append("=").append(state);
+
         } else {
             String error = queryParams.get(OidcConstants.CODE_FLOW_ERROR);
             codeFlowParams.append(OidcConstants.CODE_FLOW_ERROR).append("=").append(error);
@@ -548,7 +575,7 @@ public class OidcProxy {
     }
 
     private String getRedirectUri(RoutingContext context, String redirectUri) {
-        if (oidcTenantConfig.authentication.redirectPath.isPresent()) {
+        if (localAuthorizationCodeFlowRedirect) {
             return buildUri(context, oidcTenantConfig.authentication.redirectPath.get());
         } else {
             return redirectUri;
