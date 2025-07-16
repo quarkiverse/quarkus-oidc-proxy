@@ -181,6 +181,12 @@ public class OidcProxy {
                 .append(OidcCommonUtils
                         .urlEncode(redirectUri));
 
+        // non-standard parameter used by several providers (keycloak, microsoft, google, etc.)
+        final String loginHint = queryParams.get("login_hint");
+        if (loginHint != null) {
+            codeFlowParams.append("&").append("login_hint").append("=").append(loginHint);
+        }
+
         String authorizationURL = oidcMetadata.getAuthorizationUri() + "?" + codeFlowParams.toString();
 
         context.response().setStatusCode(HttpResponseStatus.FOUND.code());
