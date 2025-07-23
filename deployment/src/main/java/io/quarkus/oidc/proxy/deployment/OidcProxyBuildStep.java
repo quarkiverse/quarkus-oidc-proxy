@@ -11,7 +11,7 @@ import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.util.UriNormalizationUtil;
 import io.quarkus.oidc.proxy.runtime.OidcProxyRecorder;
 import io.quarkus.vertx.http.deployment.VertxWebRouterBuildItem;
-import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
+import io.quarkus.vertx.http.runtime.VertxHttpBuildTimeConfig;
 
 @BuildSteps(onlyIf = OidcProxyBuildStep.IsEnabled.class)
 public class OidcProxyBuildStep {
@@ -25,10 +25,10 @@ public class OidcProxyBuildStep {
     public void setup(
             OidcProxyRecorder recorder,
             VertxWebRouterBuildItem vertxWebRouterBuildItem,
-            HttpBuildTimeConfig httpBuildTimeConfig,
+            VertxHttpBuildTimeConfig httpBuildTimeConfig,
             BeanContainerBuildItem beanContainerBuildItem) {
         recorder.setupRoutes(beanContainerBuildItem.getValue(), vertxWebRouterBuildItem.getHttpRouter(),
-                UriNormalizationUtil.toURI(httpBuildTimeConfig.rootPath, false).toString());
+                UriNormalizationUtil.toURI(httpBuildTimeConfig.rootPath(), false).toString());
     }
 
     public static class IsEnabled implements BooleanSupplier {
