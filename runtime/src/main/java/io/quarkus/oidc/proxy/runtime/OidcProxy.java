@@ -86,7 +86,7 @@ public class OidcProxy {
             throw new ConfigurationException(
                     "Unsupported OIDC service client authentication method");
         }
-        router.get(oidcProxyConfig.rootPath() + OidcConstants.WELL_KNOWN_CONFIGURATION)
+        router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.metadataPath())
                 .handler(this::wellKnownConfig);
         if (oidcMetadata.getJsonWebKeySetUri() != null) {
             router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.jwksPath()).handler(this::jwks);

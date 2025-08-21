@@ -2,6 +2,7 @@ package io.quarkus.oidc.proxy.runtime;
 
 import java.util.Optional;
 
+import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
@@ -22,6 +23,12 @@ public interface OidcProxyConfig {
      */
     @WithDefault("/q/oidc")
     String rootPath();
+
+    /**
+     * OIDC proxy metadata path.
+     */
+    @WithDefault(OidcConstants.WELL_KNOWN_CONFIGURATION)
+    String metadataPath();
 
     /**
      * OIDC proxy authorization endpoint path relative to the {@link #rootPath()}.
