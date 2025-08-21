@@ -61,6 +61,23 @@ endif::add-copy-button-to-env-var[]
 |`/q/oidc`
 
 
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-metadata-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-metadata-path[quarkus.oidc-proxy.metadata-path]`
+
+
+[.description]
+--
+OIDC proxy metadata path.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_METADATA_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_METADATA_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/.well-known/openid-configuration`
+
+
 a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-authorization-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-authorization-path[quarkus.oidc-proxy.authorization-path]`
 
 
