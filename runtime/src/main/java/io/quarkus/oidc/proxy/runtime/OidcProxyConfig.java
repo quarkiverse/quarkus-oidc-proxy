@@ -62,6 +62,12 @@ public interface OidcProxyConfig {
     String endSessionPath();
 
     /**
+     * OIDC proxy dynamic client registration path relative to the {@link #rootPath()}
+     */
+    @WithDefault("/client-registration")
+    String clientRegistrationPath();
+
+    /**
      * Allow to return an ID token from the authorization code grant response.
      */
     @WithDefault("true")
