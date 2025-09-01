@@ -7,11 +7,11 @@ import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -121,7 +121,7 @@ public class OidcProxy {
     public void authorize(RoutingContext context) {
         LOG.debug("OidcProxy: authorize");
         MultiMap queryParams = context.queryParams();
-        Map<String, String> forwardPrams = new HashMap<>(queryParams.size());
+        Map<String, String> forwardPrams = new TreeMap<>();
 
         for (var param : queryParams) {
             switch (param.getKey()) {
@@ -132,7 +132,7 @@ public class OidcProxy {
                         forwardPrams.put(OidcConstants.CLIENT_ID, OidcCommonUtils.urlEncode(clientId));
                     }
                     break;
-                case OidcConstants.CLIENT_SECRET:
+                case OidcConstants.TOKEN_SCOPE:
                     String scope = encodeScope(param.getValue());
                     if (scope != null) {
                         forwardPrams.put(OidcConstants.TOKEN_SCOPE, scope);
@@ -176,7 +176,7 @@ public class OidcProxy {
     public void endSession(RoutingContext context) {
         LOG.debug("OidcProxy: end session");
         MultiMap queryParams = context.queryParams();
-        Map<String, String> forwardParams = new HashMap<>();
+        Map<String, String> forwardParams = new TreeMap<>();
 
         // forward all parameters
         for (var param : queryParams) {
@@ -200,7 +200,7 @@ public class OidcProxy {
     public void localAuthorizationCodeFlowRedirect(RoutingContext context) {
         LOG.debug("OidcProxy: local authorization code flow redirect");
         MultiMap queryParams = context.queryParams();
-        Map<String, String> forwardParams = new HashMap<>();
+        Map<String, String> forwardParams = new TreeMap<>();
 
         String code = queryParams.get(OidcConstants.CODE_FLOW_CODE);
         if (code != null) {
@@ -268,6 +268,15 @@ public class OidcProxy {
         location.append(redirectUri);
 
         boolean first = true;
+        // list of priority parameters that always rendered first in the redirect URL
+        for (var key : List.of(OidcConstants.CLIENT_ID, OidcConstants.CODE_FLOW_REDIRECT_URI)) {
+            String value = params.remove(key);
+            if (value != null) {
+                location.append(first ? '?' : '&').append(key).append('=').append(value);
+                first = false;
+            }
+        }
+        // the remaining parameters are then rendered in alphabetic order (given the map implementation is sorted that way)
         for (var param : params.entrySet()) {
             location.append(first ? '?' : '&').append(param.getKey()).append('=').append(param.getValue());
             first = false;
