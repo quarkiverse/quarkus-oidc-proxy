@@ -46,6 +46,11 @@ import io.vertx.mutiny.ext.web.client.WebClient;
 public class OidcProxy {
     private static final Logger LOG = Logger.getLogger(OidcProxy.class);
     private static final String OIDC_PROXY_STATE_COOKIE = "q_proxy_auth";
+    private static final String RESOURCE_INDICATOR = "resource";
+    private static final String RESPONSE_TYPES_SUPPORTED = "response_types_supported";
+    private static final String SUBJECT_TYPES_SUPPORTED = "subject_types_supported";
+    private static final String ID_TOKEN_SIGNING_ALGORITHMS_SUPPORTED = "id_token_signing_alg_values_supported";
+    private static final String CODE_CHALLENGE_METHODS_SUPPORTED = "code_challenge_methods_supported";
     final OidcConfigurationMetadata oidcMetadata;
     final OidcTenantConfig oidcTenantConfig;
     final OidcProxyConfig oidcProxyConfig;
@@ -186,6 +191,24 @@ public class OidcProxy {
         codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_REDIRECT_URI).append("=")
                 .append(OidcCommonUtils
                         .urlEncode(redirectUri));
+
+        // PKCE code challenge
+        final String codeChallenge = queryParams.get(OidcConstants.PKCE_CODE_CHALLENGE);
+        if (codeChallenge != null) {
+            codeFlowParams.append("&").append(OidcConstants.PKCE_CODE_CHALLENGE).append("=")
+                    .append(codeChallenge);
+            final String codeChallengeMethod = queryParams.get(OidcConstants.PKCE_CODE_CHALLENGE_METHOD);
+            if (codeChallengeMethod != null) {
+                codeFlowParams.append("&").append(OidcConstants.PKCE_CODE_CHALLENGE_METHOD).append("=")
+                        .append(codeChallengeMethod);
+            }
+        }
+
+        // Resource indicator
+        final String resourceIndicator = queryParams.get(RESOURCE_INDICATOR);
+        if (resourceIndicator != null) {
+            codeFlowParams.append("&").append(RESOURCE_INDICATOR).append("=").append(resourceIndicator);
+        }
 
         String authorizationURL = oidcMetadata.getAuthorizationUri() + "?" + codeFlowParams.toString();
 
@@ -396,6 +419,18 @@ public class OidcProxy {
                                 return badClientRequest(context);
                             }
                             encodeForm(buffer, OidcConstants.CODE_FLOW_REDIRECT_URI, redirectUri);
+
+                            // PKCE code_verifier
+                            String codeVerifier = requestParams.get(OidcConstants.PKCE_CODE_VERIFIER);
+                            if (codeVerifier != null) {
+                                encodeForm(buffer, OidcConstants.PKCE_CODE_VERIFIER, codeVerifier);
+                            }
+
+                            // Resource indicator
+                            String resourceIndicator = requestParams.get(RESOURCE_INDICATOR);
+                            if (resourceIndicator != null) {
+                                encodeForm(buffer, RESOURCE_INDICATOR, resourceIndicator);
+                            }
                         } else {
                             // refresh token
                             String refreshToken = requestParams.get(OidcConstants.REFRESH_TOKEN_VALUE);
@@ -537,6 +572,11 @@ public class OidcProxy {
         if (oidcMetadata.getIssuer() != null) {
             json.put(OidcConfigurationMetadata.ISSUER, oidcMetadata.getIssuer());
         }
+
+        addListProperty(oidcMetadata, json, RESPONSE_TYPES_SUPPORTED);
+        addListProperty(oidcMetadata, json, SUBJECT_TYPES_SUPPORTED);
+        addListProperty(oidcMetadata, json, CODE_CHALLENGE_METHODS_SUPPORTED);
+        addListProperty(oidcMetadata, json, ID_TOKEN_SIGNING_ALGORITHMS_SUPPORTED);
         endJsonResponse(context, json.toString());
     }
 
@@ -584,6 +624,14 @@ public class OidcProxy {
                     public void accept(Void response) {
                     }
                 });
+    }
+
+    private static void addListProperty(OidcConfigurationMetadata oidcMetadata, JsonObject json,
+            String listPropertyName) {
+        List<String> listOfStrings = oidcMetadata.getStringList(listPropertyName);
+        if (listOfStrings != null) {
+            json.put(listPropertyName, listOfStrings);
+        }
     }
 
     private Uni<Void> badClientRequest(RoutingContext context) {
