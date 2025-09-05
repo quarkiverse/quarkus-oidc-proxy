@@ -31,6 +31,8 @@ import io.quarkus.runtime.configuration.ConfigurationException;
 import io.smallrye.jwt.algorithm.KeyEncryptionAlgorithm;
 import io.smallrye.jwt.util.KeyUtils;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.subscription.UniEmitter;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
@@ -113,6 +115,10 @@ public class OidcProxy {
                 }
                 router.get(oidcTenantConfig.logout().postLogoutPath().get()).handler(this::localPostLogoutRedirect);
             }
+        }
+        if (oidcMetadata.getRegistrationUri() != null) {
+            router.post(oidcProxyConfig.rootPath() + oidcProxyConfig.clientRegistrationPath())
+                    .handler(this::clientRegistration);
         }
     }
 
@@ -524,10 +530,60 @@ public class OidcProxy {
             json.put(OidcConfigurationMetadata.USERINFO_ENDPOINT,
                     buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.userInfoPath()));
         }
+        if (oidcMetadata.getRegistrationUri() != null) {
+            json.put("registration_endpoint",
+                    buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.clientRegistrationPath()));
+        }
         if (oidcMetadata.getIssuer() != null) {
             json.put(OidcConfigurationMetadata.ISSUER, oidcMetadata.getIssuer());
         }
         endJsonResponse(context, json.toString());
+    }
+
+    public void clientRegistration(RoutingContext context) {
+
+        getJsonData(context)
+                .onItem().transformToUni(new Function<JsonObject, Uni<? extends Void>>() {
+                    @Override
+                    public Uni<Void> apply(JsonObject json) {
+
+                        LOG.debug("OidcProxy: Dynamic Client Registration");
+
+                        String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
+                        if (authHeader != null) {
+
+                            // The client might have a registration access token but using a bearer token is the only option
+                            if (!authHeader.contains("Bearer")) {
+                                LOG.error("Authorization Bearer scheme must be used");
+                                return badClientRequest(context);
+                            }
+
+                        }
+
+                        HttpRequest<Buffer> request = client.postAbs(oidcMetadata.getRegistrationUri());
+                        if (authHeader != null) {
+                            request.putHeader(String.valueOf(HttpHeaderNames.AUTHORIZATION), authHeader);
+                        }
+                        request.putHeader(String.valueOf(HttpHeaders.CONTENT_TYPE), "application/json");
+                        request.putHeader(String.valueOf(HttpHeaders.ACCEPT), "application/json");
+
+                        Uni<HttpResponse<Buffer>> response = request.sendJson(json);
+                        return response.onItemOrFailure()
+                                .transformToUni(new BiFunction<HttpResponse<Buffer>, Throwable, Uni<? extends Void>>() {
+                                    @Override
+                                    public Uni<Void> apply(HttpResponse<Buffer> t, Throwable u) {
+                                        LOG.debug("OidcProxy: Dynamic Client Registration: end");
+                                        endJsonResponse(context, t.bodyAsString());
+                                        return Uni.createFrom().voidItem();
+                                    }
+                                });
+                    }
+
+                }).subscribe().with(new Consumer<Void>() {
+                    @Override
+                    public void accept(Void response) {
+                    }
+                });
     }
 
     private Uni<Void> badClientRequest(RoutingContext context) {
@@ -651,5 +707,20 @@ public class OidcProxy {
                             + "because OIDC service expects encrypted access tokens.");
         }
         return null;
+    }
+
+    private static Uni<JsonObject> getJsonData(RoutingContext context) {
+        return Uni.createFrom().emitter(new Consumer<UniEmitter<? super JsonObject>>() {
+            @Override
+            public void accept(UniEmitter<? super JsonObject> t) {
+                context.request().bodyHandler(new Handler<io.vertx.core.buffer.Buffer>() {
+                    @Override
+                    public void handle(io.vertx.core.buffer.Buffer buffer) {
+                        t.complete(buffer.toJsonObject());
+                    }
+                });
+                context.request().resume();
+            }
+        });
     }
 }
