@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkus.test.QuarkusDevModeTest;
+import io.vertx.core.json.JsonObject;
 
 public class OidcProxyTestCase {
 
@@ -30,7 +31,10 @@ public class OidcProxyTestCase {
     public void testOidcProxy() throws Exception {
 
         try (final WebClient webClient = createWebClient()) {
-            HtmlPage page = webClient.getPage("http://localhost:8080/web-app");
+            
+        	checkWellKnownConfig(webClient);
+        	
+        	HtmlPage page = webClient.getPage("http://localhost:8080/web-app");
 
             assertEquals("Sign in to quarkus", page.getTitleText());
 
@@ -48,7 +52,12 @@ public class OidcProxyTestCase {
 
     }
 
-    private WebClient createWebClient() {
+    private static void checkWellKnownConfig(WebClient webClient) throws Exception {
+    	TextPage page = webClient.getPage("http://localhost:8080/q/oidc/.well-known/openid-configuration");
+		JsonObject json = new JsonObject(page.getContent());
+	}
+
+	private WebClient createWebClient() {
         WebClient webClient = new WebClient();
         webClient.setCssErrorHandler(new SilentCssErrorHandler());
         return webClient;
