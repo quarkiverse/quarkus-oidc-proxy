@@ -210,6 +210,14 @@ public class OidcProxy {
             codeFlowParams.append("&").append(RESOURCE_INDICATOR).append("=").append(resourceIndicator);
         }
 
+        // Additional parameters
+        if (!oidcTenantConfig.authentication().extraParams().isEmpty()) {
+            for (Map.Entry<String, String> entry : oidcTenantConfig.authentication().extraParams().entrySet()) {
+                codeFlowParams.append("&");
+                codeFlowParams.append(entry.getKey()).append("=").append(OidcCommonUtils.urlEncode(entry.getValue()));
+            }
+        }
+
         String authorizationURL = oidcMetadata.getAuthorizationUri() + "?" + codeFlowParams.toString();
 
         context.response().setStatusCode(HttpResponseStatus.FOUND.code());

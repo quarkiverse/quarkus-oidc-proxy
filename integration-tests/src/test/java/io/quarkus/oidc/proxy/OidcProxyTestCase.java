@@ -1,6 +1,7 @@
 package io.quarkus.oidc.proxy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,6 +45,8 @@ public class OidcProxyTestCase {
             assertTrue(oidcUrl.startsWith("http://localhost:8081/q/oidc/authorize"));
             // `quarkus-oidc` expects the OIDC provider redirect the user back to the protected endpoint
             assertTrue(oidcUrl.contains("redirect_uri=http%3A%2F%2Flocalhost%3A8081%2Fweb-app"));
+            // `quarkus-oidc` does not itself add a `prompt` parameter
+            assertFalse(oidcUrl.contains("prompt="));
             // No OIDC proxy state cookie available yet
             Cookie proxyStateCookie = getProxyStateCookie(webClient);
             assertNull(proxyStateCookie);
@@ -54,6 +57,8 @@ public class OidcProxyTestCase {
             String keycloakUrl = webResponse.getResponseHeaderValue("location");
             assertTrue(keycloakUrl.contains("/protocol/openid-connect/auth"));
             assertTrue(keycloakUrl.contains("redirect_uri=http%3A%2F%2Flocalhost%3A8081%2Flocal-redirect"));
+            // OIDC proxy adds a `prompt=consent` parameter
+            assertTrue(keycloakUrl.contains("prompt=consent"));
 
             // OIDC proxy state cookie must be set by now
             proxyStateCookie = getProxyStateCookie(webClient);
