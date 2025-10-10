@@ -59,6 +59,7 @@ public class OidcProxyTestCase {
             assertTrue(keycloakUrl.contains("redirect_uri=http%3A%2F%2Flocalhost%3A8081%2Flocal-redirect"));
             // OIDC proxy adds a `prompt=consent` parameter
             assertTrue(keycloakUrl.contains("prompt=consent"));
+            assertTrue(keycloakUrl.contains("test=URL+encode"));
 
             // OIDC proxy state cookie must be set by now
             proxyStateCookie = getProxyStateCookie(webClient);

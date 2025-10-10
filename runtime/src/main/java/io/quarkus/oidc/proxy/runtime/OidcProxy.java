@@ -131,97 +131,58 @@ public class OidcProxy {
         LOG.debug("OidcProxy: authorize");
         MultiMap queryParams = context.queryParams();
 
-        StringBuilder codeFlowParams = new StringBuilder(168); // experimentally determined to be a good size for preventing resizing and not wasting space
+        RedirectBuilder redirect = new RedirectBuilder(oidcMetadata.getAuthorizationUri());
+        redirect.addParam(OidcConstants.CODE_FLOW_RESPONSE_TYPE, OidcConstants.CODE_FLOW_CODE);
 
-        // response_type
-        codeFlowParams.append(OidcConstants.CODE_FLOW_RESPONSE_TYPE).append("=")
-                .append(OidcConstants.CODE_FLOW_CODE);
-        // client_id
+        // required params: client_id, scope, redirect_uri, state
         final String clientId = getClientId(queryParams.get(OidcConstants.CLIENT_ID));
         if (clientId == null) {
             LOG.error("Client id must be provided");
             badClientRequest(context);
             return;
         }
-        codeFlowParams.append("&").append(OidcConstants.CLIENT_ID).append("=")
-                .append(OidcCommonUtils.urlEncode(clientId));
-        // scope
+        redirect.addParam(OidcConstants.CLIENT_ID, OidcCommonUtils.urlEncode(clientId));
+
         String encodedScope = encodeScope(queryParams.get(OidcConstants.TOKEN_SCOPE));
         if (encodedScope != null) {
-            codeFlowParams.append("&").append(OidcConstants.TOKEN_SCOPE).append("=")
-                    .append(encodedScope);
+            redirect.addParam(OidcConstants.TOKEN_SCOPE, encodedScope);
         }
 
-        // state
-        final String state = queryParams.get(OidcConstants.CODE_FLOW_STATE);
-        if (state == null) {
-            LOG.error("State must be provided");
-            badClientRequest(context);
-            return;
-        }
-        codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_STATE).append("=")
-                .append(state);
-
-        if (localAuthorizationCodeFlowRedirect) {
-            OidcUtils.createCookie(context, oidcTenantConfig, OIDC_PROXY_STATE_COOKIE, state,
-                    oidcTenantConfig.authentication().stateCookieAge().getSeconds());
-        }
-
-        // nonce
-        final String nonce = queryParams.get(OidcConstants.NONCE);
-        if (nonce != null) {
-            codeFlowParams.append("&").append(OidcConstants.NONCE).append("=")
-                    .append(nonce);
-        }
-
-        // prompt
-        final String prompt = queryParams.get("prompt");
-        if (prompt != null) {
-            codeFlowParams.append("&").append("prompt").append("=")
-                    .append(prompt);
-        }
-
-        // redirect_uri
         final String redirectUri = getRedirectUri(context, queryParams.get(OidcConstants.CODE_FLOW_REDIRECT_URI));
         if (redirectUri == null) {
             LOG.error("Redirect URI must be provided");
             badClientRequest(context);
             return;
         }
-        codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_REDIRECT_URI).append("=")
-                .append(OidcCommonUtils
-                        .urlEncode(redirectUri));
+        redirect.addParam(OidcConstants.CODE_FLOW_REDIRECT_URI, OidcCommonUtils.urlEncode(redirectUri));
 
-        // PKCE code challenge
-        final String codeChallenge = queryParams.get(OidcConstants.PKCE_CODE_CHALLENGE);
-        if (codeChallenge != null) {
-            codeFlowParams.append("&").append(OidcConstants.PKCE_CODE_CHALLENGE).append("=")
-                    .append(codeChallenge);
-            final String codeChallengeMethod = queryParams.get(OidcConstants.PKCE_CODE_CHALLENGE_METHOD);
-            if (codeChallengeMethod != null) {
-                codeFlowParams.append("&").append(OidcConstants.PKCE_CODE_CHALLENGE_METHOD).append("=")
-                        .append(codeChallengeMethod);
-            }
+        final String state = queryParams.get(OidcConstants.CODE_FLOW_STATE);
+        if (state == null) {
+            LOG.error("State must be provided");
+            badClientRequest(context);
+            return;
         }
+        redirect.addParam(OidcConstants.CODE_FLOW_STATE, state);
 
-        // Resource indicator
-        final String resourceIndicator = queryParams.get(RESOURCE_INDICATOR);
-        if (resourceIndicator != null) {
-            codeFlowParams.append("&").append(RESOURCE_INDICATOR).append("=").append(resourceIndicator);
+        if (localAuthorizationCodeFlowRedirect) {
+            OidcUtils.createCookie(context, oidcTenantConfig, OIDC_PROXY_STATE_COOKIE, state,
+                    oidcTenantConfig.authentication().stateCookieAge().getSeconds());
         }
 
         // Additional parameters
         if (!oidcTenantConfig.authentication().extraParams().isEmpty()) {
-            for (Map.Entry<String, String> entry : oidcTenantConfig.authentication().extraParams().entrySet()) {
-                codeFlowParams.append("&");
-                codeFlowParams.append(entry.getKey()).append("=").append(OidcCommonUtils.urlEncode(entry.getValue()));
+            for (var entry : oidcTenantConfig.authentication().extraParams().entrySet()) {
+                redirect.addParam(entry.getKey(), OidcCommonUtils.urlEncode(entry.getValue()));
             }
         }
 
-        String authorizationURL = oidcMetadata.getAuthorizationUri() + "?" + codeFlowParams.toString();
+        // forward all other params
+        redirect.addAll(queryParams, OidcConstants.CODE_FLOW_RESPONSE_TYPE,
+                OidcConstants.CLIENT_ID, OidcConstants.TOKEN_SCOPE,
+                OidcConstants.CODE_FLOW_REDIRECT_URI, OidcConstants.CODE_FLOW_STATE);
 
         context.response().setStatusCode(HttpResponseStatus.FOUND.code());
-        context.response().putHeader(HttpHeaders.LOCATION, authorizationURL);
+        context.response().putHeader(HttpHeaders.LOCATION, redirect.getLocation());
         context.response().end();
     }
 
@@ -229,36 +190,20 @@ public class OidcProxy {
         LOG.debug("OidcProxy: end session");
         MultiMap queryParams = context.queryParams();
 
-        StringBuilder endSessionParams = new StringBuilder(168); // experimentally determined to be a good size for preventing resizing and not wasting space
-
-        // ID token hint
-        final String idTokenHint = queryParams.get(OidcConstants.LOGOUT_ID_TOKEN_HINT);
-        if (idTokenHint != null) {
-            endSessionParams.append(OidcConstants.LOGOUT_ID_TOKEN_HINT).append("=").append(idTokenHint);
-        }
+        RedirectBuilder redirect = new RedirectBuilder(oidcMetadata.getEndSessionUri());
 
         // redirect_uri
-        final String postLogoutUri = getPostLogoutUri(context, queryParams.get(oidcTenantConfig.logout().postLogoutUriParam()));
-        if (postLogoutUri != null) {
-            if (!endSessionParams.isEmpty()) {
-                endSessionParams.append("&");
-            }
-            endSessionParams.append(oidcTenantConfig.logout().postLogoutUriParam()).append("=").append(postLogoutUri);
-        }
+        final String logoutUri = oidcTenantConfig.logout().postLogoutUriParam();
+        redirect.addParam(logoutUri, getPostLogoutUri(context, queryParams.get(logoutUri)));
 
-        if (!oidcTenantConfig.logout().extraParams().isEmpty()) {
-            for (Map.Entry<String, String> entry : oidcTenantConfig.logout().extraParams().entrySet()) {
-                if (!endSessionParams.isEmpty()) {
-                    endSessionParams.append("&");
-                }
-                endSessionParams.append(entry.getKey()).append("=").append(OidcCommonUtils.urlEncode(entry.getValue()));
-            }
-        }
+        // forward all other params
+        redirect.addAll(queryParams, logoutUri);
 
-        String endSessionURL = oidcMetadata.getEndSessionUri() + "?" + endSessionParams.toString();
+        // add extra params
+        redirect.addAll(oidcTenantConfig.logout().extraParams().entrySet());
 
         context.response().setStatusCode(HttpResponseStatus.FOUND.code());
-        context.response().putHeader(HttpHeaders.LOCATION, endSessionURL);
+        context.response().putHeader(HttpHeaders.LOCATION, redirect.getLocation());
         context.response().end();
     }
 
@@ -266,7 +211,7 @@ public class OidcProxy {
         LOG.debug("OidcProxy: local authorization code flow redirect");
         MultiMap queryParams = context.queryParams();
 
-        StringBuilder codeFlowParams = new StringBuilder(168); // experimentally determined to be a good size for preventing resizing and not wasting space
+        RedirectBuilder redirect = new RedirectBuilder(oidcProxyConfig.externalRedirectUri().get());
 
         String code = queryParams.get(OidcConstants.CODE_FLOW_CODE);
         if (code != null) {
@@ -282,7 +227,7 @@ public class OidcProxy {
                 }
             }
             // code
-            codeFlowParams.append(OidcConstants.CODE_FLOW_CODE).append("=").append(code);
+            redirect.addParam(OidcConstants.CODE_FLOW_CODE, code);
             // state
             String state = queryParams.get(OidcConstants.CODE_FLOW_STATE);
             if (state == null) {
@@ -305,22 +250,22 @@ public class OidcProxy {
                 return;
             }
 
-            codeFlowParams.append("&").append(OidcConstants.CODE_FLOW_STATE).append("=").append(state);
+            // forward all other params
+            redirect.addAll(queryParams, OidcConstants.CODE_FLOW_CODE);
 
         } else {
-            String error = queryParams.get(OidcConstants.CODE_FLOW_ERROR);
-            codeFlowParams.append(OidcConstants.CODE_FLOW_ERROR).append("=").append(error);
+            redirect.addParam(OidcConstants.CODE_FLOW_ERROR, queryParams.get(OidcConstants.CODE_FLOW_ERROR));
             String errorDescription = queryParams.get(OidcConstants.CODE_FLOW_ERROR_DESCRIPTION);
             if (errorDescription != null) {
-                codeFlowParams.append(OidcConstants.CODE_FLOW_ERROR_DESCRIPTION).append("=")
-                        .append(OidcCommonUtils.urlEncode(errorDescription));
+                redirect.addParam(OidcConstants.CODE_FLOW_ERROR_DESCRIPTION, OidcCommonUtils.urlEncode(errorDescription));
             }
+
+            // forward all other params
+            redirect.addAll(queryParams, OidcConstants.CODE_FLOW_ERROR, OidcConstants.CODE_FLOW_ERROR_DESCRIPTION);
         }
 
-        String redirectURL = oidcProxyConfig.externalRedirectUri().get() + "?" + codeFlowParams.toString();
-
         context.response().setStatusCode(HttpResponseStatus.FOUND.code());
-        context.response().putHeader(HttpHeaders.LOCATION, redirectURL);
+        context.response().putHeader(HttpHeaders.LOCATION, redirect.getLocation());
         context.response().end();
     }
 
@@ -779,4 +724,45 @@ public class OidcProxy {
             }
         });
     }
+
+    /**
+     * Helper class to create the location for a redirect
+     */
+    private static class RedirectBuilder {
+
+        private final StringBuilder location;
+        private boolean noParams = true;
+
+        public RedirectBuilder(String uri) {
+            location = new StringBuilder(256); // experimentally determined to be a good size for preventing resizing and not wasting space
+            location.append(uri);
+        }
+
+        public void addAll(Iterable<Map.Entry<String, String>> params, String... exceptParams) {
+            for (var param : params) {
+                boolean skip = false;
+                for (var except : exceptParams) {
+                    if (except.equals(param.getKey())) {
+                        skip = true;
+                        break;
+                    }
+                }
+                if (!skip) {
+                    addParam(param.getKey(), param.getValue());
+                }
+            }
+        }
+
+        public void addParam(String paramName, String paramValue) {
+            if (paramValue != null) {
+                location.append(noParams ? '?' : '&').append(paramName).append('=').append(paramValue);
+                noParams = false;
+            }
+        }
+
+        public String getLocation() {
+            return location.toString();
+        }
+    }
+
 }
