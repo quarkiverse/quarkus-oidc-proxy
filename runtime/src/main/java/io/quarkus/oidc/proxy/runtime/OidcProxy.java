@@ -76,6 +76,9 @@ public class OidcProxy {
     }
 
     public void setup(Router router) {
+
+        LOG.debugf("Creating OIDC proxy route handlers at the %s router", router.getClass().getName());
+
         if (oidcTenantConfig.applicationType.orElse(ApplicationType.SERVICE) == ApplicationType.WEB_APP) {
             throw new ConfigurationException("OIDC Proxy can only be used with OIDC service applications");
         }
@@ -93,37 +96,59 @@ public class OidcProxy {
             throw new ConfigurationException(
                     "Unsupported OIDC service client authentication method");
         }
-        router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.metadataPath())
-                .handler(this::wellKnownConfig);
+
+        final String metadataPath = oidcProxyConfig.rootPath() + oidcProxyConfig.metadataPath();
+        LOG.debugf("Metadata route handler path: %s", metadataPath);
+        router.get(metadataPath).handler(this::wellKnownConfig);
+
         if (oidcMetadata.getJsonWebKeySetUri() != null) {
-            router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.jwksPath()).handler(this::jwks);
+            final String jwksPath = oidcProxyConfig.rootPath() + oidcProxyConfig.jwksPath();
+            LOG.debugf("JWKS keys route handler path: %s", jwksPath);
+            router.get(jwksPath).handler(this::jwks);
         }
         if (oidcMetadata.getUserInfoUri() != null && oidcProxyConfig.allowIdToken()) {
-            router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.userInfoPath()).handler(this::userinfo);
+            final String userInfoPath = oidcProxyConfig.rootPath() + oidcProxyConfig.userInfoPath();
+            LOG.debugf("UserInfo route handler path: %s", userInfoPath);
+            router.get(userInfoPath).handler(this::userinfo);
         }
-        router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.authorizationPath()).handler(this::authorize);
-        router.post(oidcProxyConfig.rootPath() + oidcProxyConfig.tokenPath()).handler(this::token);
+
+        final String authorizationPath = oidcProxyConfig.rootPath() + oidcProxyConfig.authorizationPath();
+        LOG.debugf("Authorization route handler path: %s", authorizationPath);
+        router.get(authorizationPath).handler(this::authorize);
+
+        final String tokenPath = oidcProxyConfig.rootPath() + oidcProxyConfig.tokenPath();
+        LOG.debugf("Token route handler path: %s", tokenPath);
+        router.post(tokenPath).handler(this::token);
+
         if (localAuthorizationCodeFlowRedirect) {
             if (!oidcProxyConfig.externalRedirectUri().isPresent()) {
                 throw new ConfigurationException("oidc-proxy.external-redirect-uri property must be configured because"
                         + "the local quarkus.oidc.authentication.redirect-path is configured");
             }
-            router.get(oidcTenantConfig.authentication.redirectPath.get()).handler(this::localAuthorizationCodeFlowRedirect);
+            LOG.debugf("Local authorization redirect route handler path: %s",
+                    oidcTenantConfig.authentication.redirectPath().get());
+            router.get(oidcTenantConfig.authentication.redirectPath().get()).handler(this::localAuthorizationCodeFlowRedirect);
         }
 
         if (oidcMetadata.getEndSessionUri() != null) {
-            router.get(oidcProxyConfig.rootPath() + oidcProxyConfig.endSessionPath()).handler(this::endSession);
+            final String endSessionPath = oidcProxyConfig.rootPath() + oidcProxyConfig.endSessionPath();
+            LOG.debugf("End session route handler path: %s", endSessionPath);
+            router.get(endSessionPath).handler(this::endSession);
+
             if (oidcTenantConfig.logout().postLogoutPath().isPresent()) {
                 if (!oidcProxyConfig.externalPostLogoutUri().isPresent()) {
                     throw new ConfigurationException("oidc-proxy.external-post-logout-uri property must be configured because"
                             + "the local quarkus.oidc.logout.post-logout-path is configured");
                 }
+                LOG.debugf("Post logout route handler path: %s", oidcTenantConfig.logout().postLogoutPath().get());
                 router.get(oidcTenantConfig.logout().postLogoutPath().get()).handler(this::localPostLogoutRedirect);
             }
         }
         if (oidcMetadata.getRegistrationUri() != null) {
-            router.post(oidcProxyConfig.rootPath() + oidcProxyConfig.clientRegistrationPath())
-                    .handler(this::clientRegistration);
+            final String clientRegistrationPath = oidcProxyConfig.rootPath() + oidcProxyConfig.clientRegistrationPath();
+            LOG.debugf("client registration route handler path: %s", clientRegistrationPath);
+
+            router.post(clientRegistrationPath).handler(this::clientRegistration);
         }
     }
 
