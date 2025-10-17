@@ -691,7 +691,8 @@ public class OidcProxy {
 
     private String buildUri(RoutingContext context, String path) {
         final String authority = URI.create(context.request().absoluteURI()).getAuthority();
-        final String scheme = oidcTenantConfig.authentication.forceRedirectHttpsScheme.isPresent() ? "https"
+        final String scheme = oidcTenantConfig.authentication().forceRedirectHttpsScheme().orElse(false)
+                ? "https"
                 : context.request().scheme();
         return new StringBuilder(scheme).append("://")
                 .append(authority)
