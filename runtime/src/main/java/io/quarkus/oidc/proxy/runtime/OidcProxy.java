@@ -49,6 +49,7 @@ public class OidcProxy {
     private static final String RESOURCE_INDICATOR = "resource";
     private static final String RESPONSE_TYPES_SUPPORTED = "response_types_supported";
     private static final String SUBJECT_TYPES_SUPPORTED = "subject_types_supported";
+    private static final String SCOPES_SUPPORTED = "scopes_supported";
     private static final String ID_TOKEN_SIGNING_ALGORITHMS_SUPPORTED = "id_token_signing_alg_values_supported";
     private static final String CODE_CHALLENGE_METHODS_SUPPORTED = "code_challenge_methods_supported";
     final OidcConfigurationMetadata oidcMetadata;
@@ -553,6 +554,7 @@ public class OidcProxy {
 
         addListProperty(oidcMetadata, json, RESPONSE_TYPES_SUPPORTED);
         addListProperty(oidcMetadata, json, SUBJECT_TYPES_SUPPORTED);
+        addListProperty(oidcMetadata, json, SCOPES_SUPPORTED);
         addListProperty(oidcMetadata, json, CODE_CHALLENGE_METHODS_SUPPORTED);
         addListProperty(oidcMetadata, json, ID_TOKEN_SIGNING_ALGORITHMS_SUPPORTED);
         endJsonResponse(context, json.toString());
