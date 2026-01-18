@@ -1,11 +1,14 @@
 package io.quarkus.oidc.proxy.runtime;
 
+import java.util.List;
 import java.util.Optional;
 
 import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
+import io.quarkus.runtime.configuration.TrimmedStringConverter;
 import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithConverter;
 import io.smallrye.config.WithDefault;
 
 @ConfigMapping(prefix = "quarkus.oidc-proxy")
@@ -119,4 +122,10 @@ public interface OidcProxyConfig {
      * with either this property or the OIDC tenant configuration, in order to support public clients.
      */
     Optional<String> externalClientSecret();
+
+    /**
+     * List of scopes to be added to the client registration request.
+     * These scopes will be merged with any scopes provided in the incoming client registration request.
+     */
+    Optional<List<@WithConverter(TrimmedStringConverter.class) String>> clientRegistrationScopes();
 }

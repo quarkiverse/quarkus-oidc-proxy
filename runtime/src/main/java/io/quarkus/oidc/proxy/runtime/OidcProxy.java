@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -578,6 +579,19 @@ public class OidcProxy {
                                 return badClientRequest(context);
                             }
 
+                        }
+
+                        Optional<List<String>> configuredScopes = oidcProxyConfig.clientRegistrationScopes();
+                        if (configuredScopes.isPresent() && !configuredScopes.get().isEmpty()) {
+                            Set<String> scopes = new HashSet<>(configuredScopes.get());
+                            String incomingScope = json.getString(OidcConstants.TOKEN_SCOPE);
+                            if (incomingScope != null && !incomingScope.isBlank()) {
+                                Arrays.stream(incomingScope.split(" "))
+                                        .map(String::trim)
+                                        .filter(s -> !s.isEmpty())
+                                        .forEach(scopes::add);
+                            }
+                            json.put(OidcConstants.TOKEN_SCOPE, String.join(" ", scopes));
                         }
 
                         HttpRequest<Buffer> request = client.postAbs(oidcMetadata.getRegistrationUri());
