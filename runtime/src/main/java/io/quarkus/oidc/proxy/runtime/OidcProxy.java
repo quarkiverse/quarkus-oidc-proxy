@@ -70,7 +70,7 @@ public class OidcProxy {
         this.oidcMetadata = tenantConfigContext.getOidcMetadata();
         this.client = tenantConfigContext.getOidcProviderClient().getWebClient();
         this.oidcProxyConfig = oidcProxyConfig;
-        this.configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials);
+        this.configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials).await().indefinitely();
         this.httpRootPath = httpRootPath;
         this.localAuthorizationCodeFlowRedirect = oidcTenantConfig.authentication().redirectPath().isPresent();
         this.tokenEncryptionKey = createTokenEncryptionKey(oidcProxyConfig, oidcTenantConfig, configuredClientSecret);
