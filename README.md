@@ -31,7 +31,12 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- markdownlint-disable -->
 <table>
   <tr>
-    <td align="center"><a href="https://github.com/sberyozkin"><img src="https://avatars.githubusercontent.com/u/467639?v=4?s=100" width="100px;" alt=""/><br /><sub><b>sberyozkin</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-kerberos/commits?author=sberyozkin" title="Code">💻</a> <a href="#maintenance-sberyozkin" title="Maintenance">🚧</a></td>
+    <td align="center"><a href="https://github.com/sberyozkin"><img src="https://avatars.githubusercontent.com/u/467639?v=4" width="100px;" alt=""/><br /><sub><b>sberyozkin</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=sberyozkin" title="Code">💻</a> <a href="#maintenance-sberyozkin" title="Maintenance">🚧</a></td>
+    <td align="center"><a href="https://github.com/gastaldi"><img src="https://avatars.githubusercontent.com/u/54133?v=4" width="100px;" alt=""/><br /><sub><b>gastaldi</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=gastaldi" title="Code">💻</a> <a href="#maintenance-gastaldi" title="Maintenance">🚧</a></td>
+    <td align="center"><a href="https://github.com/thiagoelg"><img src="https://avatars.githubusercontent.com/u/10515135?v=4" width="100px;" alt=""/><br /><sub><b>thiagoelg</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=thiagoelg" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/barreiro"><img src="https://avatars.githubusercontent.com/u/856614?v=4" width="100px;" alt=""/><br /><sub><b>barreiro</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=barreiro" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/vincent-mooser-imtf"><img src="https://avatars.githubusercontent.com/u/99247166?v=4" width="100px;" alt=""/><br /><sub><b>vincent-mooser-imtf</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=vincent-mooser-imtf" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/akoufa"><img src="https://avatars.githubusercontent.com/u/4354310?v=4" width="100px;" alt=""/><br /><sub><b>akoufa</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=akoufa" title="Code">💻</a></td>
   </tr>
 </table>
 
