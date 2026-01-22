@@ -74,6 +74,7 @@ public class OidcProxyTestCase {
         checkSubjectTypesSupported(json.getJsonArray("subject_types_supported"));
         checkCodeChallengeMethodsSupported(json.getJsonArray("code_challenge_methods_supported"));
         checkIdTokenSigningAlorithmsSupported(json.getJsonArray("id_token_signing_alg_values_supported"));
+        checkScopesSupported(json.getJsonArray("scopes_supported"));
     }
 
     private static void checkIdTokenSigningAlorithmsSupported(JsonArray jsonArray) {
@@ -93,6 +94,11 @@ public class OidcProxyTestCase {
 
     private static void checkResponseTypesSupported(JsonArray jsonArray) {
         assertTrue(jsonArray.contains("code"));
+    }
+
+    private static void checkScopesSupported(JsonArray jsonArray) {
+        assertTrue(jsonArray.contains("openid"));
+        assertTrue(jsonArray.contains("profile"));
     }
 
     private WebClient createWebClient() {
