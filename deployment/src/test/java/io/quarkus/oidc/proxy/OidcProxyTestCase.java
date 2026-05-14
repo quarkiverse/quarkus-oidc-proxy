@@ -67,6 +67,7 @@ public class OidcProxyTestCase {
         assertEquals("http://localhost:8080/q/oidc/logout", json.getString("end_session_endpoint"));
         assertEquals("http://localhost:8080/q/oidc/userinfo", json.getString("userinfo_endpoint"));
         assertEquals("http://localhost:8080/q/oidc/client-registration", json.getString("registration_endpoint"));
+        assertEquals("http://localhost:8080/q/oidc/revoke", json.getString("revocation_endpoint"));
         assertTrue(json.getString("issuer").contains("http://localhost"));
         assertTrue(json.getString("issuer").contains("/realms/quarkus"));
 

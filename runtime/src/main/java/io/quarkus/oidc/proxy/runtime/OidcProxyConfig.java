@@ -71,6 +71,12 @@ public interface OidcProxyConfig {
     String clientRegistrationPath();
 
     /**
+     * OIDC proxy token revocation endpoint path relative to the {@link #rootPath()}
+     */
+    @WithDefault("/revoke")
+    String revocationPath();
+
+    /**
      * Allow to return an ID token from the authorization code grant response.
      */
     @WithDefault("true")

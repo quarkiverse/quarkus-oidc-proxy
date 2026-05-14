@@ -152,6 +152,11 @@ public class OidcProxy {
 
             router.post(clientRegistrationPath).handler(this::clientRegistration);
         }
+        if (oidcMetadata.getRevocationUri() != null) {
+            final String revocationPath = oidcProxyConfig.rootPath() + oidcProxyConfig.revocationPath();
+            LOG.debugf("Token revocation route handler path: %s", revocationPath);
+            router.post(revocationPath).handler(this::revoke);
+        }
     }
 
     public void authorize(RoutingContext context) {
@@ -549,6 +554,10 @@ public class OidcProxy {
             json.put("registration_endpoint",
                     buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.clientRegistrationPath()));
         }
+        if (oidcMetadata.getRevocationUri() != null) {
+            json.put(OidcConfigurationMetadata.REVOCATION_ENDPOINT,
+                    buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.revocationPath()));
+        }
         if (oidcMetadata.getIssuer() != null) {
             json.put(OidcConfigurationMetadata.ISSUER, oidcMetadata.getIssuer());
         }
@@ -608,6 +617,115 @@ public class OidcProxy {
                                     public Uni<Void> apply(HttpResponse<Buffer> t, Throwable u) {
                                         LOG.debug("OidcProxy: Dynamic Client Registration: end");
                                         endJsonResponse(context, t.bodyAsString());
+                                        return Uni.createFrom().voidItem();
+                                    }
+                                });
+                    }
+
+                }).subscribe().with(new Consumer<Void>() {
+                    @Override
+                    public void accept(Void response) {
+                    }
+                });
+    }
+
+    public void revoke(RoutingContext context) {
+        OidcUtils.getFormUrlEncodedData(context)
+                .onItem().transformToUni(new Function<MultiMap, Uni<? extends Void>>() {
+                    @Override
+                    public Uni<Void> apply(MultiMap requestParams) {
+                        LOG.debug("OidcProxy: Token revocation: start");
+                        HttpRequest<Buffer> request = client.postAbs(oidcMetadata.getRevocationUri());
+                        request.putHeader(String.valueOf(HttpHeaders.CONTENT_TYPE), String
+                                .valueOf(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED));
+                        request.putHeader(String.valueOf(HttpHeaders.ACCEPT), "application/json");
+
+                        Buffer buffer = Buffer.buffer();
+
+                        // client id and secret
+                        String clientId = null;
+                        String clientSecret = null;
+
+                        String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
+                        if (authHeader != null) {
+                            LOG.debug("OidcProxy: Authorization header");
+                            String[] clientIdAndSecret = getClientIdAndSecretFromAuthorization(authHeader);
+                            clientId = getClientId(clientIdAndSecret[0]);
+                            clientSecret = clientIdAndSecret[1];
+                        } else {
+                            LOG.debug("OidcProxy: POST authentication");
+                            clientId = getClientId(requestParams.get(OidcConstants.CLIENT_ID));
+                            clientSecret = requestParams.get(OidcConstants.CLIENT_SECRET);
+                        }
+                        if (clientId == null) {
+                            LOG.error("Client id must be provided");
+                            return badClientRequest(context);
+                        }
+
+                        if (oidcProxyConfig.externalClientSecret().isPresent()) {
+                            if (oidcProxyConfig.externalClientSecret().get().equals(clientSecret)) {
+                                clientSecret = configuredClientSecret;
+                            } else {
+                                LOG.error("Provided client secret does not match the external client secret property");
+                                return badClientRequest(context);
+                            }
+                        }
+                        if (configuredClientSecret != null && !configuredClientSecret.equals(clientSecret)) {
+                            LOG.error("Provided client secret does not match the OIDC service client secret property");
+                            return badClientRequest(context);
+                        }
+
+                        Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
+                        if (authMethod == Method.BASIC) {
+                            String encodedClientIdAndSecret = new String(Base64.getEncoder().encode(
+                                    (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8)),
+                                    StandardCharsets.UTF_8);
+                            request.putHeader(String.valueOf(HttpHeaders.AUTHORIZATION),
+                                    "Basic " + encodedClientIdAndSecret);
+                        } else if (authMethod == Method.POST) {
+                            encodeForm(buffer, OidcConstants.CLIENT_ID, clientId);
+                            encodeForm(buffer, OidcConstants.CLIENT_SECRET, clientSecret);
+                        } else if (authMethod == Method.QUERY) {
+                            request.addQueryParam(OidcConstants.CLIENT_ID, OidcCommonUtils.urlEncode(clientId));
+                            request.addQueryParam(OidcConstants.CLIENT_SECRET, OidcCommonUtils.urlEncode(clientSecret));
+                        }
+
+                        // token (required)
+                        String token = requestParams.get(OidcConstants.REVOCATION_TOKEN);
+                        if (token == null) {
+                            LOG.error("Token to revoke must be provided");
+                            return badClientRequest(context);
+                        }
+                        if (tokenEncryptionKey != null) {
+                            try {
+                                token = OidcUtils.decryptString(token, tokenDecryptionKey, getEncryptionAlgorithm());
+                            } catch (Throwable tex) {
+                                LOG.error("Token can not be decrypted");
+                                return serverError(context);
+                            }
+                        }
+                        encodeForm(buffer, OidcConstants.REVOCATION_TOKEN, token);
+
+                        // token_type_hint (optional)
+                        String tokenTypeHint = requestParams.get(OidcConstants.REVOCATION_TOKEN_TYPE_HINT);
+                        if (tokenTypeHint != null) {
+                            encodeForm(buffer, OidcConstants.REVOCATION_TOKEN_TYPE_HINT, tokenTypeHint);
+                        }
+
+                        Uni<HttpResponse<Buffer>> response = request.sendBuffer(buffer);
+                        return response.onItemOrFailure()
+                                .transformToUni(new BiFunction<HttpResponse<Buffer>, Throwable, Uni<? extends Void>>() {
+                                    @Override
+                                    public Uni<Void> apply(HttpResponse<Buffer> t, Throwable u) {
+                                        LOG.debug("OidcProxy: Token revocation: end");
+                                        context.response().setStatusCode(t.statusCode());
+                                        String body = t.bodyAsString();
+                                        if (body != null && !body.isEmpty()) {
+                                            context.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+                                            context.end(body);
+                                        } else {
+                                            context.response().end();
+                                        }
                                         return Uni.createFrom().voidItem();
                                     }
                                 });
