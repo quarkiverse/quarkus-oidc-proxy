@@ -331,53 +331,8 @@ public class OidcProxy {
                         }
                         encodeForm(buffer, OidcConstants.GRANT_TYPE, grantType);
 
-                        // client id and secret
-                        String clientId = null;
-                        String clientSecret = null;
-
-                        // check Authorization header
-                        String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
-                        if (authHeader != null) {
-                            LOG.debug("OidcProxy: Authorization header");
-                            String[] clientIdAndSecret = getClientIdAndSecretFromAuthorization(authHeader);
-                            clientId = getClientId(clientIdAndSecret[0]);
-                            clientSecret = clientIdAndSecret[1];
-                        } else {
-                            LOG.debug("OidcProxy: POST authentication");
-                            clientId = getClientId(requestParams.get(OidcConstants.CLIENT_ID));
-                            clientSecret = requestParams.get(OidcConstants.CLIENT_SECRET);
-                        }
-                        if (clientId == null) {
-                            LOG.error("Client id must be provided");
-                            return badClientRequest(context);
-                        }
-
-                        if (oidcProxyConfig.externalClientSecret().isPresent()) {
-                            if (oidcProxyConfig.externalClientSecret().get().equals(clientSecret)) {
-                                clientSecret = configuredClientSecret;
-                            } else {
-                                LOG.error("Provided client secret does not match the external client secret property");
-                                return badClientRequest(context);
-                            }
-                        }
-                        if (configuredClientSecret != null && !configuredClientSecret.equals(clientSecret)) {
-                            LOG.error("Provided client secret does not match the OIDC service client secret property");
-                            return badClientRequest(context);
-                        }
-
-                        Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
-                        if (authMethod == Method.BASIC) {
-                            String encodedClientIdAndSecret = new String(Base64.getEncoder().encode(
-                                    (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8)),
-                                    StandardCharsets.UTF_8);
-                            request.putHeader(String.valueOf(HttpHeaders.AUTHORIZATION),
-                                    "Basic " + encodedClientIdAndSecret);
-                        } else if (authMethod == Method.POST) {
-                            encodeForm(buffer, OidcConstants.CLIENT_ID, clientId);
-                            encodeForm(buffer, OidcConstants.CLIENT_SECRET, clientSecret);
-                        } else if (authMethod == Method.QUERY) {
-                            request.addQueryParam(OidcConstants.CLIENT_ID, OidcCommonUtils.urlEncode(clientId));
-                            request.addQueryParam(OidcConstants.CLIENT_SECRET, OidcCommonUtils.urlEncode(clientSecret));
+                        if (!authenticateClient(context, requestParams, request, buffer)) {
+                            return Uni.createFrom().voidItem();
                         }
 
                         if (!requestParams.contains(OidcConstants.REFRESH_TOKEN_VALUE)) {
@@ -642,52 +597,8 @@ public class OidcProxy {
 
                         Buffer buffer = Buffer.buffer();
 
-                        // client id and secret
-                        String clientId = null;
-                        String clientSecret = null;
-
-                        String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
-                        if (authHeader != null) {
-                            LOG.debug("OidcProxy: Authorization header");
-                            String[] clientIdAndSecret = getClientIdAndSecretFromAuthorization(authHeader);
-                            clientId = getClientId(clientIdAndSecret[0]);
-                            clientSecret = clientIdAndSecret[1];
-                        } else {
-                            LOG.debug("OidcProxy: POST authentication");
-                            clientId = getClientId(requestParams.get(OidcConstants.CLIENT_ID));
-                            clientSecret = requestParams.get(OidcConstants.CLIENT_SECRET);
-                        }
-                        if (clientId == null) {
-                            LOG.error("Client id must be provided");
-                            return badClientRequest(context);
-                        }
-
-                        if (oidcProxyConfig.externalClientSecret().isPresent()) {
-                            if (oidcProxyConfig.externalClientSecret().get().equals(clientSecret)) {
-                                clientSecret = configuredClientSecret;
-                            } else {
-                                LOG.error("Provided client secret does not match the external client secret property");
-                                return badClientRequest(context);
-                            }
-                        }
-                        if (configuredClientSecret != null && !configuredClientSecret.equals(clientSecret)) {
-                            LOG.error("Provided client secret does not match the OIDC service client secret property");
-                            return badClientRequest(context);
-                        }
-
-                        Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
-                        if (authMethod == Method.BASIC) {
-                            String encodedClientIdAndSecret = new String(Base64.getEncoder().encode(
-                                    (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8)),
-                                    StandardCharsets.UTF_8);
-                            request.putHeader(String.valueOf(HttpHeaders.AUTHORIZATION),
-                                    "Basic " + encodedClientIdAndSecret);
-                        } else if (authMethod == Method.POST) {
-                            encodeForm(buffer, OidcConstants.CLIENT_ID, clientId);
-                            encodeForm(buffer, OidcConstants.CLIENT_SECRET, clientSecret);
-                        } else if (authMethod == Method.QUERY) {
-                            request.addQueryParam(OidcConstants.CLIENT_ID, OidcCommonUtils.urlEncode(clientId));
-                            request.addQueryParam(OidcConstants.CLIENT_SECRET, OidcCommonUtils.urlEncode(clientSecret));
+                        if (!authenticateClient(context, requestParams, request, buffer)) {
+                            return Uni.createFrom().voidItem();
                         }
 
                         // token (required)
@@ -744,6 +655,60 @@ public class OidcProxy {
         if (listOfStrings != null) {
             json.put(listPropertyName, listOfStrings);
         }
+    }
+
+    private boolean authenticateClient(RoutingContext context, MultiMap requestParams,
+            HttpRequest<Buffer> request, Buffer buffer) {
+        String clientId = null;
+        String clientSecret = null;
+
+        String authHeader = context.request().getHeader(HttpHeaderNames.AUTHORIZATION);
+        if (authHeader != null) {
+            LOG.debug("OidcProxy: Authorization header");
+            String[] clientIdAndSecret = getClientIdAndSecretFromAuthorization(authHeader);
+            clientId = getClientId(clientIdAndSecret[0]);
+            clientSecret = clientIdAndSecret[1];
+        } else {
+            LOG.debug("OidcProxy: POST authentication");
+            clientId = getClientId(requestParams.get(OidcConstants.CLIENT_ID));
+            clientSecret = requestParams.get(OidcConstants.CLIENT_SECRET);
+        }
+        if (clientId == null) {
+            LOG.error("Client id must be provided");
+            badClientRequest(context);
+            return false;
+        }
+
+        if (oidcProxyConfig.externalClientSecret().isPresent()) {
+            if (oidcProxyConfig.externalClientSecret().get().equals(clientSecret)) {
+                clientSecret = configuredClientSecret;
+            } else {
+                LOG.error("Provided client secret does not match the external client secret property");
+                badClientRequest(context);
+                return false;
+            }
+        }
+        if (configuredClientSecret != null && !configuredClientSecret.equals(clientSecret)) {
+            LOG.error("Provided client secret does not match the OIDC service client secret property");
+            badClientRequest(context);
+            return false;
+        }
+
+        Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
+        if (authMethod == Method.BASIC) {
+            String encodedClientIdAndSecret = new String(Base64.getEncoder().encode(
+                    (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8)),
+                    StandardCharsets.UTF_8);
+            request.putHeader(String.valueOf(HttpHeaders.AUTHORIZATION),
+                    "Basic " + encodedClientIdAndSecret);
+        } else if (authMethod == Method.POST) {
+            encodeForm(buffer, OidcConstants.CLIENT_ID, clientId);
+            encodeForm(buffer, OidcConstants.CLIENT_SECRET, clientSecret);
+        } else if (authMethod == Method.QUERY) {
+            request.addQueryParam(OidcConstants.CLIENT_ID, OidcCommonUtils.urlEncode(clientId));
+            request.addQueryParam(OidcConstants.CLIENT_SECRET, OidcCommonUtils.urlEncode(clientSecret));
+        }
+        return true;
     }
 
     private Uni<Void> badClientRequest(RoutingContext context) {
