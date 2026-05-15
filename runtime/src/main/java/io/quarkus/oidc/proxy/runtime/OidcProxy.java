@@ -377,22 +377,10 @@ public class OidcProxy {
                                 encodeForm(buffer, RESOURCE_INDICATOR, resourceIndicator);
                             }
                         } else {
-                            // refresh token
-                            String refreshToken = requestParams.get(OidcConstants.REFRESH_TOKEN_VALUE);
-                            if (refreshToken == null) {
-                                LOG.error("Refresh token must be provided");
-                                return badClientRequest(context);
+                            if (!decryptAndEncodeToken(context, requestParams, buffer,
+                                    OidcConstants.REFRESH_TOKEN_VALUE, null)) {
+                                return Uni.createFrom().voidItem();
                             }
-                            if (tokenEncryptionKey != null) {
-                                try {
-                                    refreshToken = OidcUtils.decryptString(refreshToken, tokenDecryptionKey,
-                                            getEncryptionAlgorithm());
-                                } catch (Throwable tex) {
-                                    LOG.error("Refresh token can not be decrypted");
-                                    return serverError(context);
-                                }
-                            }
-                            encodeForm(buffer, OidcConstants.REFRESH_TOKEN_VALUE, refreshToken);
                         }
 
                         Uni<HttpResponse<Buffer>> response = request.sendBuffer(buffer);
@@ -610,26 +598,9 @@ public class OidcProxy {
                             return Uni.createFrom().voidItem();
                         }
 
-                        // token (required)
-                        String token = requestParams.get(OidcConstants.REVOCATION_TOKEN);
-                        if (token == null) {
-                            LOG.error("Token to revoke must be provided");
-                            return badClientRequest(context);
-                        }
-                        if (tokenEncryptionKey != null) {
-                            try {
-                                token = OidcUtils.decryptString(token, tokenDecryptionKey, getEncryptionAlgorithm());
-                            } catch (Throwable tex) {
-                                LOG.error("Token can not be decrypted");
-                                return serverError(context);
-                            }
-                        }
-                        encodeForm(buffer, OidcConstants.REVOCATION_TOKEN, token);
-
-                        // token_type_hint (optional)
-                        String tokenTypeHint = requestParams.get(OidcConstants.REVOCATION_TOKEN_TYPE_HINT);
-                        if (tokenTypeHint != null) {
-                            encodeForm(buffer, OidcConstants.REVOCATION_TOKEN_TYPE_HINT, tokenTypeHint);
+                        if (!decryptAndEncodeToken(context, requestParams, buffer,
+                                OidcConstants.REVOCATION_TOKEN, OidcConstants.REVOCATION_TOKEN_TYPE_HINT)) {
+                            return Uni.createFrom().voidItem();
                         }
 
                         Uni<HttpResponse<Buffer>> response = request.sendBuffer(buffer);
@@ -675,26 +646,9 @@ public class OidcProxy {
                             return Uni.createFrom().voidItem();
                         }
 
-                        // token (required)
-                        String token = requestParams.get(OidcConstants.INTROSPECTION_TOKEN);
-                        if (token == null) {
-                            LOG.error("Token to introspect must be provided");
-                            return badClientRequest(context);
-                        }
-                        if (tokenEncryptionKey != null) {
-                            try {
-                                token = OidcUtils.decryptString(token, tokenDecryptionKey, getEncryptionAlgorithm());
-                            } catch (Throwable tex) {
-                                LOG.error("Token can not be decrypted");
-                                return serverError(context);
-                            }
-                        }
-                        encodeForm(buffer, OidcConstants.INTROSPECTION_TOKEN, token);
-
-                        // token_type_hint (optional)
-                        String tokenTypeHint = requestParams.get(OidcConstants.INTROSPECTION_TOKEN_TYPE_HINT);
-                        if (tokenTypeHint != null) {
-                            encodeForm(buffer, OidcConstants.INTROSPECTION_TOKEN_TYPE_HINT, tokenTypeHint);
+                        if (!decryptAndEncodeToken(context, requestParams, buffer,
+                                OidcConstants.INTROSPECTION_TOKEN, OidcConstants.INTROSPECTION_TOKEN_TYPE_HINT)) {
+                            return Uni.createFrom().voidItem();
                         }
 
                         Uni<HttpResponse<Buffer>> response = request.sendBuffer(buffer);
@@ -729,6 +683,34 @@ public class OidcProxy {
         if (listOfStrings != null) {
             json.put(listPropertyName, listOfStrings);
         }
+    }
+
+    private boolean decryptAndEncodeToken(RoutingContext context, MultiMap requestParams, Buffer buffer,
+            String tokenParam, String tokenTypeHintParam) {
+        String token = requestParams.get(tokenParam);
+        if (token == null) {
+            LOG.errorf("'%s' parameter must be provided", tokenParam);
+            badClientRequest(context);
+            return false;
+        }
+        if (tokenEncryptionKey != null) {
+            try {
+                token = OidcUtils.decryptString(token, tokenDecryptionKey, getEncryptionAlgorithm());
+            } catch (Throwable tex) {
+                LOG.error("Token can not be decrypted");
+                serverError(context);
+                return false;
+            }
+        }
+        encodeForm(buffer, tokenParam, token);
+
+        if (tokenTypeHintParam != null) {
+            String tokenTypeHint = requestParams.get(tokenTypeHintParam);
+            if (tokenTypeHint != null) {
+                encodeForm(buffer, tokenTypeHintParam, tokenTypeHint);
+            }
+        }
+        return true;
     }
 
     private boolean authenticateClient(RoutingContext context, MultiMap requestParams,
