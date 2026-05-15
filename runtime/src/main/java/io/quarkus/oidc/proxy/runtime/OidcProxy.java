@@ -157,6 +157,11 @@ public class OidcProxy {
             LOG.debugf("Token revocation route handler path: %s", revocationPath);
             router.post(revocationPath).handler(this::revoke);
         }
+        if (oidcMetadata.getIntrospectionUri() != null) {
+            final String introspectionPath = oidcProxyConfig.rootPath() + oidcProxyConfig.introspectionPath();
+            LOG.debugf("Token introspection route handler path: %s", introspectionPath);
+            router.post(introspectionPath).handler(this::introspect);
+        }
     }
 
     public void authorize(RoutingContext context) {
@@ -513,6 +518,10 @@ public class OidcProxy {
             json.put(OidcConfigurationMetadata.REVOCATION_ENDPOINT,
                     buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.revocationPath()));
         }
+        if (oidcMetadata.getIntrospectionUri() != null) {
+            json.put(OidcConfigurationMetadata.INTROSPECTION_ENDPOINT,
+                    buildUri(context, oidcProxyConfig.rootPath() + oidcProxyConfig.introspectionPath()));
+        }
         if (oidcMetadata.getIssuer() != null) {
             json.put(OidcConfigurationMetadata.ISSUER, oidcMetadata.getIssuer());
         }
@@ -629,6 +638,71 @@ public class OidcProxy {
                                     @Override
                                     public Uni<Void> apply(HttpResponse<Buffer> t, Throwable u) {
                                         LOG.debug("OidcProxy: Token revocation: end");
+                                        context.response().setStatusCode(t.statusCode());
+                                        String body = t.bodyAsString();
+                                        if (body != null && !body.isEmpty()) {
+                                            context.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+                                            context.end(body);
+                                        } else {
+                                            context.response().end();
+                                        }
+                                        return Uni.createFrom().voidItem();
+                                    }
+                                });
+                    }
+
+                }).subscribe().with(new Consumer<Void>() {
+                    @Override
+                    public void accept(Void response) {
+                    }
+                });
+    }
+
+    public void introspect(RoutingContext context) {
+        OidcUtils.getFormUrlEncodedData(context)
+                .onItem().transformToUni(new Function<MultiMap, Uni<? extends Void>>() {
+                    @Override
+                    public Uni<Void> apply(MultiMap requestParams) {
+                        LOG.debug("OidcProxy: Token introspection: start");
+                        HttpRequest<Buffer> request = client.postAbs(oidcMetadata.getIntrospectionUri());
+                        request.putHeader(String.valueOf(HttpHeaders.CONTENT_TYPE), String
+                                .valueOf(HttpHeaders.APPLICATION_X_WWW_FORM_URLENCODED));
+                        request.putHeader(String.valueOf(HttpHeaders.ACCEPT), "application/json");
+
+                        Buffer buffer = Buffer.buffer();
+
+                        if (!authenticateClient(context, requestParams, request, buffer)) {
+                            return Uni.createFrom().voidItem();
+                        }
+
+                        // token (required)
+                        String token = requestParams.get(OidcConstants.INTROSPECTION_TOKEN);
+                        if (token == null) {
+                            LOG.error("Token to introspect must be provided");
+                            return badClientRequest(context);
+                        }
+                        if (tokenEncryptionKey != null) {
+                            try {
+                                token = OidcUtils.decryptString(token, tokenDecryptionKey, getEncryptionAlgorithm());
+                            } catch (Throwable tex) {
+                                LOG.error("Token can not be decrypted");
+                                return serverError(context);
+                            }
+                        }
+                        encodeForm(buffer, OidcConstants.INTROSPECTION_TOKEN, token);
+
+                        // token_type_hint (optional)
+                        String tokenTypeHint = requestParams.get(OidcConstants.INTROSPECTION_TOKEN_TYPE_HINT);
+                        if (tokenTypeHint != null) {
+                            encodeForm(buffer, OidcConstants.INTROSPECTION_TOKEN_TYPE_HINT, tokenTypeHint);
+                        }
+
+                        Uni<HttpResponse<Buffer>> response = request.sendBuffer(buffer);
+                        return response.onItemOrFailure()
+                                .transformToUni(new BiFunction<HttpResponse<Buffer>, Throwable, Uni<? extends Void>>() {
+                                    @Override
+                                    public Uni<Void> apply(HttpResponse<Buffer> t, Throwable u) {
+                                        LOG.debug("OidcProxy: Token introspection: end");
                                         context.response().setStatusCode(t.statusCode());
                                         String body = t.bodyAsString();
                                         if (body != null && !body.isEmpty()) {
