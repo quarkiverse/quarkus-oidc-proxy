@@ -38,6 +38,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <td align="center"><a href="https://github.com/barreiro"><img src="https://avatars.githubusercontent.com/u/856614?v=4" width="100px;" alt=""/><br /><sub><b>barreiro</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=barreiro" title="Code">💻</a></td>
     <td align="center"><a href="https://github.com/vincent-mooser-imtf"><img src="https://avatars.githubusercontent.com/u/99247166?v=4" width="100px;" alt=""/><br /><sub><b>vincent-mooser-imtf</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=vincent-mooser-imtf" title="Code">💻</a></td>
     <td align="center"><a href="https://github.com/akoufa"><img src="https://avatars.githubusercontent.com/u/4354310?v=4" width="100px;" alt=""/><br /><sub><b>akoufa</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=akoufa" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/oscerd"><img src="https://avatars.githubusercontent.com/u/5106647?v=4" width="100px;" alt=""/><br /><sub><b>oscerd</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-oidc-proxy/commits?author=oscerd" title="Code">💻</a></td>
   </tr>
 </table>
 
