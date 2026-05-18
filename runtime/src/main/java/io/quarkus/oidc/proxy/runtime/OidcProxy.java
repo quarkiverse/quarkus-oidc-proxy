@@ -722,6 +722,11 @@ public class OidcProxy {
         if (authHeader != null) {
             LOG.debug("OidcProxy: Authorization header");
             String[] clientIdAndSecret = getClientIdAndSecretFromAuthorization(authHeader);
+            if (clientIdAndSecret == null) {
+                LOG.error("Authorization header is not valid Basic authentication");
+                badClientRequest(context);
+                return false;
+            }
             clientId = getClientId(clientIdAndSecret[0]);
             clientSecret = clientIdAndSecret[1];
         } else {
@@ -857,9 +862,12 @@ public class OidcProxy {
     }
 
     private String[] getClientIdAndSecretFromAuthorization(String authHeader) {
-        if (authHeader != null && (authHeader.startsWith("Basic") || authHeader.startsWith("Basic"))) {
+        if (authHeader != null && authHeader.regionMatches(true, 0, "Basic ", 0, 6)) {
             String plainIdSecret = new String(Base64.getDecoder().decode(authHeader.substring(6)), StandardCharsets.UTF_8);
-            return plainIdSecret.split(":");
+            String[] parts = plainIdSecret.split(":", 2);
+            if (parts.length == 2) {
+                return parts;
+            }
         }
         return null;
     }
