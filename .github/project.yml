@@ -1,5 +1,5 @@
 name: Quarkus OIDC Proxy
 release:
-  current-version: "0.6.0"
+  current-version: "0.6.1"
   next-version: 999-SNAPSHOT
 
