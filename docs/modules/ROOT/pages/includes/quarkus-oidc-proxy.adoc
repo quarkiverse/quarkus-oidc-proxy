@@ -163,6 +163,40 @@ endif::add-copy-button-to-env-var[]
 |`/userinfo`
 
 
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-introspection-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-introspection-path[quarkus.oidc-proxy.introspection-path]`
+
+
+[.description]
+--
+OIDC proxy token introspection endpoint path relative to the `root-path()`.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_INTROSPECTION_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_INTROSPECTION_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/introspect`
+
+
+a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-revocation-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-revocation-path[quarkus.oidc-proxy.revocation-path]`
+
+
+[.description]
+--
+OIDC proxy token revocation endpoint path relative to the `root-path()`.
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_OIDC_PROXY_REVOCATION_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_OIDC_PROXY_REVOCATION_PATH+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|`/revoke`
+
+
 a| [[quarkus-oidc-proxy_quarkus-oidc-proxy-client-registration-path]]`link:#quarkus-oidc-proxy_quarkus-oidc-proxy-client-registration-path[quarkus.oidc-proxy.client-registration-path]`
 
 
