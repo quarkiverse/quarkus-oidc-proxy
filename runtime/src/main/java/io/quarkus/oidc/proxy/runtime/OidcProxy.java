@@ -25,6 +25,7 @@ import io.quarkus.oidc.OidcTenantConfig.ApplicationType;
 import io.quarkus.oidc.common.runtime.OidcClientCommonConfig.Credentials.Secret.Method;
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
 import io.quarkus.oidc.common.runtime.OidcConstants;
+import io.quarkus.oidc.common.runtime.OidcWebClient;
 import io.quarkus.oidc.runtime.OidcUtils;
 import io.quarkus.oidc.runtime.TenantConfigBean;
 import io.quarkus.oidc.runtime.TenantConfigContext;
@@ -42,7 +43,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpRequest;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
-import io.vertx.mutiny.ext.web.client.WebClient;
 
 public class OidcProxy {
     private static final Logger LOG = Logger.getLogger(OidcProxy.class);
@@ -56,7 +56,7 @@ public class OidcProxy {
     final OidcConfigurationMetadata oidcMetadata;
     final OidcTenantConfig oidcTenantConfig;
     final OidcProxyConfig oidcProxyConfig;
-    final WebClient client;
+    final OidcWebClient client;
     final String configuredClientSecret;
     final String httpRootPath;
     final boolean localAuthorizationCodeFlowRedirect;
