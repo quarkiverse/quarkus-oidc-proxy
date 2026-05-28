@@ -24,7 +24,7 @@
   </scm>
   <properties>
     <quarkus.version>3.36.0</quarkus.version>
-    <htmlunit.version>4.21.0</htmlunit.version>
+    <htmlunit.version>5.0.0</htmlunit.version>
   </properties>
   <dependencyManagement>
     <dependencies>
