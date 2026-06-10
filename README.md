@@ -22,6 +22,21 @@ To get started, add the dependency:
 
 For more details, check the complete [documentation](https://quarkiverse.github.io/quarkiverse-docs/quarkus-oidc-proxy/dev/index.html).
 
+## Compatibility
+
+Quarkus OIDC Proxy is tightly coupled with the Quarkus OIDC extension and may have to be periodically updated to align with the newly released major or minor Quarkus version.
+
+Quarkus OIDC Proxy provides different version streams:
+
+| Quarkus  | Quarkus OIDC Proxy |
+|----------|--------------------|
+| <=3.35   | 0.6.x              |
+| >=3.36.x | 0.7.x              |
+
+Currently, while it remains an experimental extension, it uses a minor version to differentiate between different streams.
+
+Use the latest version of the corresponding stream, [the list of versions is available on Maven Central](https://search.maven.org/artifact/io.quarkiverse.oidc-proxy/quarkus-oidc-proxy).
+
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
