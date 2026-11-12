@@ -23,7 +23,8 @@
     <tag>HEAD</tag>
   </scm>
   <properties>
-    <quarkus.version>3.40.1</quarkus.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <quarkus.version>4.0.0</quarkus.version>
     <htmlunit.version>5.7.0</htmlunit.version>
   </properties>
   <dependencyManagement>
