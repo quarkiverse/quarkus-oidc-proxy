@@ -21,11 +21,11 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.quarkus.oidc.OidcConfigurationMetadata;
 import io.quarkus.oidc.OidcTenantConfig;
-import io.quarkus.oidc.OidcTenantConfig.ApplicationType;
-import io.quarkus.oidc.common.runtime.OidcClientCommonConfig.Credentials.Secret.Method;
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
 import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.oidc.common.runtime.OidcWebClient;
+import io.quarkus.oidc.common.runtime.config.OidcClientCommonConfig.Credentials.Secret.Method;
+import io.quarkus.oidc.runtime.OidcTenantConfig.ApplicationType;
 import io.quarkus.oidc.runtime.OidcUtils;
 import io.quarkus.oidc.runtime.TenantConfigBean;
 import io.quarkus.oidc.runtime.TenantConfigContext;
@@ -36,11 +36,11 @@ import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.subscription.UniEmitter;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpRequest;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 
@@ -70,7 +70,7 @@ public class OidcProxy {
         this.oidcMetadata = tenantConfigContext.getOidcMetadata();
         this.client = tenantConfigContext.getOidcProviderClient().getWebClient();
         this.oidcProxyConfig = oidcProxyConfig;
-        this.configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials).await().indefinitely();
+        this.configuredClientSecret = OidcCommonUtils.clientSecret(oidcTenantConfig.credentials()).await().indefinitely();
         this.httpRootPath = httpRootPath;
         this.localAuthorizationCodeFlowRedirect = oidcTenantConfig.authentication().redirectPath().isPresent();
         this.tokenEncryptionKey = createTokenEncryptionKey(oidcProxyConfig, oidcTenantConfig, configuredClientSecret);
@@ -81,7 +81,7 @@ public class OidcProxy {
 
         LOG.debugf("Creating OIDC proxy route handlers at the %s router", router.getClass().getName());
 
-        if (oidcTenantConfig.applicationType.orElse(ApplicationType.SERVICE) == ApplicationType.WEB_APP) {
+        if (oidcTenantConfig.applicationType().orElse(ApplicationType.SERVICE) == ApplicationType.WEB_APP) {
             throw new ConfigurationException("OIDC Proxy can only be used with OIDC service applications");
         }
         if (oidcProxyConfig.externalClientSecret().isPresent() && configuredClientSecret.isEmpty()) {
@@ -93,7 +93,7 @@ public class OidcProxy {
             throw new ConfigurationException(
                     "OIDC Proxy requires that at least OIDC authorization and token endpoints are configured");
         }
-        Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
+        Method authMethod = oidcTenantConfig.credentials().clientSecret().method().orElse(Method.BASIC);
         if (authMethod == Method.POST_JWT) {
             throw new ConfigurationException(
                     "Unsupported OIDC service client authentication method");
@@ -128,8 +128,9 @@ public class OidcProxy {
                         + "the local quarkus.oidc.authentication.redirect-path is configured");
             }
             LOG.debugf("Local authorization redirect route handler path: %s",
-                    oidcTenantConfig.authentication.redirectPath().get());
-            router.get(oidcTenantConfig.authentication.redirectPath().get()).handler(this::localAuthorizationCodeFlowRedirect);
+                    oidcTenantConfig.authentication().redirectPath().get());
+            router.get(oidcTenantConfig.authentication().redirectPath().get())
+                    .handler(this::localAuthorizationCodeFlowRedirect);
         }
 
         if (oidcMetadata.getEndSessionUri() != null) {
@@ -755,7 +756,7 @@ public class OidcProxy {
             return false;
         }
 
-        Method authMethod = oidcTenantConfig.credentials.clientSecret.method.orElse(Method.BASIC);
+        Method authMethod = oidcTenantConfig.credentials().clientSecret().method().orElse(Method.BASIC);
         if (authMethod == Method.BASIC) {
             String encodedClientIdAndSecret = new String(Base64.getEncoder().encode(
                     (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8)),
@@ -802,14 +803,14 @@ public class OidcProxy {
     private String getClientId(String providedClientId) {
         if (oidcProxyConfig.externalClientId().isPresent()) {
             if (oidcProxyConfig.externalClientId().get().equals(providedClientId)) {
-                return oidcTenantConfig.clientId.get();
+                return oidcTenantConfig.clientId().get();
             } else {
                 LOG.errorf("Provided client id '%s' does not match the external client id '%s' property", providedClientId,
                         oidcProxyConfig.externalClientId().get());
                 return null;
             }
         }
-        if (oidcTenantConfig.clientId.isPresent() && !oidcTenantConfig.clientId.get().equals(providedClientId)) {
+        if (oidcTenantConfig.clientId().isPresent() && !oidcTenantConfig.clientId().get().equals(providedClientId)) {
             LOG.error("Provided client id does not match the OIDC service client id property");
             return null;
         }
@@ -818,7 +819,7 @@ public class OidcProxy {
 
     private String getRedirectUri(RoutingContext context, String redirectUri) {
         if (localAuthorizationCodeFlowRedirect) {
-            return buildUri(context, oidcTenantConfig.authentication.redirectPath.get());
+            return buildUri(context, oidcTenantConfig.authentication().redirectPath().get());
         } else {
             return redirectUri;
         }
@@ -833,11 +834,12 @@ public class OidcProxy {
     }
 
     private String encodeScope(String providedScope) {
-        final String scopeSeparator = oidcTenantConfig.authentication.scopeSeparator.orElse(OidcUtils.DEFAULT_SCOPE_SEPARATOR);
+        final String scopeSeparator = oidcTenantConfig.authentication().scopeSeparator()
+                .orElse(OidcUtils.DEFAULT_SCOPE_SEPARATOR);
         Set<String> scopes = new HashSet<>(OidcUtils.getAllScopes(oidcTenantConfig));
         scopes.addAll(providedScope != null && !providedScope.isEmpty() ? Arrays.asList(providedScope.split(scopeSeparator))
                 : List.of());
-        if (oidcTenantConfig.authentication.addOpenidScope.orElse(true)) {
+        if (oidcTenantConfig.authentication().addOpenidScope().orElse(true)) {
             scopes.add(OidcConstants.OPENID_SCOPE);
         } else {
             scopes.remove(OidcConstants.OPENID_SCOPE);
